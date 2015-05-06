@@ -1,0 +1,14 @@
+Source: php-tc-lib-pdf-filter
+Maintainer: Nicola Asuni <info@tecnick.com>
+Section: php
+Priority: optional
+Build-Depends: debhelper (>= 9)
+Standards-Version: 3.9.5
+Homepage: https://github.com/tecnickcom/tc-lib-pdf-filter
+Vcs-Git: https://github.com/tecnickcom/tc-lib-pdf-filter.git
+
+Package: php-tc-lib-pdf-filter
+Architecture: all
+Recommends: php5
+Description: PHP PDF Filter Library
+ PHP library to decode PDF compression and encryption filters.
