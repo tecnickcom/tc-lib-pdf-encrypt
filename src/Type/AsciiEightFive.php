@@ -101,7 +101,8 @@ class AsciiEightFive
     /**
      * Get last tuple
      *
-     * @param string $data Data to decode.
+     * @param int $group_pos
+     * @param int $tuple
      *
      * @return string Decoded data string.
      */
