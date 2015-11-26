@@ -37,10 +37,11 @@ class AES extends AESnopad
      *
      * @param string $data Data string to encrypt
      * @param string $key  Encryption key
+     * @param string $ivect Initialization vector (ignored)
      *
      * @return string Encrypted data string.
      */
-    protected function encryptOpenSsl($data, $key)
+    protected function encryptOpenSsl($data, $key, $ivect = self::IVECT)
     {
         $ivect = openssl_random_pseudo_bytes(openssl_cipher_iv_length('aes-256-cbc'));
         return $ivect.parent::encryptOpenSsl($data, $key, $ivect);
@@ -51,10 +52,11 @@ class AES extends AESnopad
      *
      * @param string $data Data string to encrypt
      * @param string $key  Encryption key
+     * @param string $ivect Initialization vector (ignored)
      *
      * @return string Encrypted data string.
      */
-    protected function encryptMcrypt($data, $key)
+    protected function encryptMcrypt($data, $key, $ivect = self::IVECT)
     {
         $ivect = mcrypt_create_iv(mcrypt_get_iv_size(MCRYPT_RIJNDAEL_128, MCRYPT_MODE_CBC), MCRYPT_RAND);
         return $ivect.parent::encryptMcrypt($data, $key, $ivect);
