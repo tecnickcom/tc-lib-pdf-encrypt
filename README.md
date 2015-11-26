@@ -1,6 +1,18 @@
 # tc-lib-pdf-encrypt
+*PHP library to encrypt data for PDF*
 
-*Please consider supporting this project by making a donation to <paypal@tecnick.com>*
+[![Latest Stable Version](https://poser.pugx.org/tecnickcom/tc-lib-pdf-encrypt/version)](https://packagist.org/packages/tecnickcom/tc-lib-pdf-encrypt)
+[![Master Build Status](https://secure.travis-ci.org/tecnickcom/tc-lib-pdf-encrypt.png?branch=master)](https://travis-ci.org/tecnickcom/tc-lib-pdf-encrypt?branch=master)
+[![Master Coverage Status](https://coveralls.io/repos/tecnickcom/tc-lib-pdf-encrypt/badge.svg?branch=master&service=github)](https://coveralls.io/github/tecnickcom/tc-lib-pdf-encrypt?branch=master)
+[![License](https://poser.pugx.org/tecnickcom/tc-lib-pdf-encrypt/license)](https://packagist.org/packages/tecnickcom/tc-lib-pdf-encrypt)
+[![Total Downloads](https://poser.pugx.org/tecnickcom/tc-lib-pdf-encrypt/downloads)](https://packagist.org/packages/tecnickcom/tc-lib-pdf-encrypt)
+*
+[![Develop Branch](https://img.shields.io/badge/-develop:-gray.svg)](https://github.com/tecnickcom/tc-lib-pdf-encrypt/tree/develop)
+[![Develop Build Status](https://secure.travis-ci.org/tecnickcom/tc-lib-pdf-encrypt.png?branch=develop)](https://travis-ci.org/tecnickcom/tc-lib-pdf-encrypt?branch=develop)
+[![Develop Coverage Status](https://coveralls.io/repos/tecnickcom/tc-lib-pdf-encrypt/badge.svg?branch=develop&service=github)](https://coveralls.io/github/tecnickcom/tc-lib-pdf-encrypt?branch=develop)
+
+[![Donate via PayPal](https://img.shields.io/badge/donate-paypal-87ceeb.svg)](https://www.paypal.com/cgi-bin/webscr?cmd=_donations&currency_code=GBP&business=paypal@tecnick.com&item_name=donation%20for%20tc-lib-pdf-encrypt%20project)
+*Please consider supporting this project by making a donation via [PayPal](https://www.paypal.com/cgi-bin/webscr?cmd=_donations&currency_code=GBP&business=paypal@tecnick.com&item_name=donation%20for%20tc-lib-pdf-encrypt%20project)*
 
 * **category**    Library
 * **package**     \Com\Tecnick\Pdf\Encrypt
@@ -9,18 +21,11 @@
 * **license**     http://www.gnu.org/copyleft/lesser.html GNU-LGPL v3 (see LICENSE.TXT)
 * **link**        https://github.com/tecnickcom/tc-lib-pdf-encrypt
 
-## Status
-* **MASTER**: [![Build Status](https://secure.travis-ci.org/tecnickcom/tc-lib-pdf-encrypt.png?branch=master)](https://travis-ci.org/tecnickcom/tc-lib-pdf-encrypt?branch=master)
-[![Coverage Status](https://coveralls.io/repos/tecnickcom/tc-lib-pdf-encrypt/badge.svg?branch=master&service=github)](https://coveralls.io/github/tecnickcom/tc-lib-pdf-encrypt?branch=master)
-* **DEVELOP**: [![Build Status](https://secure.travis-ci.org/tecnickcom/tc-lib-pdf-encrypt.png?branch=develop)](https://travis-ci.org/tecnickcom/tc-lib-pdf-encrypt?branch=develop)
-[![Coverage Status](https://coveralls.io/repos/tecnickcom/tc-lib-pdf-encrypt/badge.svg?branch=develop&service=github)](https://coveralls.io/github/tecnickcom/tc-lib-pdf-encrypt?branch=develop)
-
-
 ## Description
 
 PHP library to encrypt data for PDF.
 
-The initial source code has been extracted from TCPDF (<http://www.tcpdf.org>).
+The initial source code has been derived from [TCPDF](<http://www.tcpdf.org>).
 
 
 ## Getting started
@@ -78,7 +83,7 @@ Please check all the available options using `make help`.
 
 Examples are located in the `example` directory.
 
-Start a development server (requires PHP 5.5) using the command:
+Start a development server (requires PHP 5.4) using the command:
 
 ```
 make server
