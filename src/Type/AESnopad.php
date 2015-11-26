@@ -80,6 +80,7 @@ class AESnopad
      *
      * @param string $data Data string to encrypt
      * @param string $key  Encryption key
+     * @param string $ivect Initialization vector
      *
      * @return string Encrypted data string.
      */
