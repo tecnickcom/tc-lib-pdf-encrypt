@@ -224,6 +224,42 @@ class EncryptTest extends \PHPUnit_Framework_TestCase
         $this->assertEquals('\\(hello world\\) slash \\\\\r', $result);
     }
 
+    public function testEncryptStringDisabled()
+    {
+        $enc = new \Com\Tecnick\Pdf\Encrypt\Encrypt();
+        
+        $result = $enc->encryptString('');
+        $this->assertEquals('', $result);
+        
+        $result = $enc->encryptString('hello world');
+        $this->assertEquals('hello world', $result);
+
+        $result = $enc->encryptString('(hello world) slash \\'.chr(13).chr(250));
+        $this->assertEquals('(hello world) slash \\'.chr(13).chr(250), $result);
+    }
+
+    public function testEncryptStringEnabled()
+    {
+        $permissions = array(
+            'print',
+            'modify',
+            'copy',
+            'annot-forms',
+            'fill-forms',
+            'extract',
+            'assemble',
+            'print-high'
+        );
+        
+        $enc = new \Com\Tecnick\Pdf\Encrypt\Encrypt(true, md5('file_id'), 0, $permissions, 'alpha');
+        $result = $enc->encryptString('(hello world) slash \\'.chr(13));
+        $this->assertEquals('728cc693be1e4c1fb6b7e7b2a34644ad', md5($result));
+
+        $enc = new \Com\Tecnick\Pdf\Encrypt\Encrypt(true, md5('file_id'), 1, $permissions, 'alpha', 'beta');
+        $result = $enc->encryptString('(hello world) slash \\'.chr(13));
+        $this->assertEquals('258ad774ddeec21b3b439a720df18e0d', md5($result));
+    }
+
     public function testEscapeDataStringDisabled()
     {
         $enc = new \Com\Tecnick\Pdf\Encrypt\Encrypt();
