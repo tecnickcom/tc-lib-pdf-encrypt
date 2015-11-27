@@ -325,16 +325,28 @@ class Encrypt extends \Com\Tecnick\Pdf\Encrypt\Compute
     }
 
     /**
+     * Encrypt a string
+     *
+     * @param string $str    String to encrypt
+     * @param int    $objnum Object ID
+     *
+     * @return string
+     */
+    public function encryptString($str, $objnum = null)
+    {
+        return $this->encrypt($this->encryptdata['mode'], $str, null, $objnum);
+    }
+
+    /**
      * Format a data string for meta information
      *
-     * @param string $s      Data string to escape
+     * @param string $str    Data string to escape
      * @param int    $objnum Object ID
      *
      * @return string
      */
     public function escapeDataString($str, $objnum = null)
     {
-        $str = $this->encrypt($this->encryptdata['mode'], $str, null, $objnum);
-        return '('.$this->escapeString($str).')';
+        return '('.$this->escapeString($this->encryptString($str, $objnum)).')';
     }
 }
