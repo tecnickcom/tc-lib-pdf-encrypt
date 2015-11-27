@@ -32,7 +32,6 @@ addons:
 
 before_install:
   - composer self-update
-  - echo 'extension = mcrypt.so' >> ~/.phpenv/versions/$(phpenv version-name)/etc/php.ini
 
 before_script:
   - flags=""
