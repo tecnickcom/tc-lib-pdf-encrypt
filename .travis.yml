@@ -37,10 +37,8 @@ before_install:
   - if [ -n "$GH_TOKEN" ]; then git config --global github.token ${GH_TOKEN}; fi;
 
 before_script:
-  - flags=""
-  - if [ `phpenv version-name` == "5.3" ]; then flags="--ignore-platform-reqs"; fi
-  - composer install --no-interaction $flags
-  - composer require satooshi/php-coveralls:dev-master --no-interaction $flags
+  - composer install --no-interaction
+  - composer require satooshi/php-coveralls:dev-master --no-interaction
 
 script:
   - make qa_all
