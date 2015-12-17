@@ -33,30 +33,30 @@ abstract class Output
     /**
      * Get the PDF encryption block
      *
-     * @param int $objid This PDF Object number
+     * @param int $pon Current PDF object number
      *
      * return string
      */
-    public function getPdfEncryptionObj($objid)
+    public function getPdfEncryptionObj(&$pon)
     {
         $this->setMissingValues();
-        $this->encryptdata['objid'] = $objid;
-        $out = $this->encryptdata['objid'].' 0 obj'."\n";
-        $out .= '<<';
-        $out .= ' /Filter /'.$this->encryptdata['Filter'];
+        $this->encryptdata['objid'] = ++$pon;
+        $out = $this->encryptdata['objid'].' 0 obj'."\n"
+            .'<<'."\n"
+            .'/Filter /'.$this->encryptdata['Filter']."\n";
         if (!empty($this->encryptdata['SubFilter'])) {
-            $out .= ' /SubFilter /'.$this->encryptdata['SubFilter'];
+            $out .= '/SubFilter /'.$this->encryptdata['SubFilter']."\n";
         }
         // V is a code specifying the algorithm to be used in encrypting and decrypting the document
-        $out .= ' /V '.$this->encryptdata['V'];
+        $out .= '/V '.$this->encryptdata['V']."\n";
         // The length of the encryption key, in bits. The value shall be a multiple of 8, in the range 40 to 256
-        $out .= ' /Length '.$this->encryptdata['Length'];
+        $out .= '/Length '.$this->encryptdata['Length']."\n";
         if ($this->encryptdata['V'] >= 4) {
             $out .= $this->getCryptFilter();
             // The name of the crypt filter that shall be used by default when decrypting streams.
-            $out .= ' /StmF /'.$this->encryptdata['StmF'];
+            $out .= '/StmF /'.$this->encryptdata['StmF']."\n";
             // The name of the crypt filter that shall be used when decrypting all strings in the document.
-            $out .= ' /StrF /'.$this->encryptdata['StrF'];
+            $out .= '/StrF /'.$this->encryptdata['StrF']."\n";
             /*
             if (!empty($this->encryptdata['EFF'])) {
                 // The name of the crypt filter that shall be used when encrypting embedded file streams
@@ -65,9 +65,9 @@ abstract class Output
             }
             */
         }
-        $out .= $this->getAdditionalEncDic();
-        $out .= ' >>';
-        $out .= "\n".'endobj';
+        $out .= $this->getAdditionalEncDic()
+            .'>>'."\n"
+            .'endobj'."\n";
         return $out;
     }
 
@@ -81,28 +81,27 @@ abstract class Output
      */
     protected function getCryptFilter()
     {
-        $out = '';
-        $out .= ' /CF <<';
-        $out .= ' /'.$this->encryptdata['StmF'].' <<';
-        $out .= ' /Type /CryptFilter';
-        // The method used
-        $out .= ' /CFM /'.$this->encryptdata['CF']['CFM'];
+        $out = '/CF <<'."\n"
+            .'/'.$this->encryptdata['StmF'].' <<'."\n"
+            .'/Type /CryptFilter'."\n"
+            .'/CFM /'.$this->encryptdata['CF']['CFM']."\n";  // The method used
         if ($this->encryptdata['pubkey']) {
-            $out .= ' /Recipients [';
+            $out .= '/Recipients [';
             foreach ($this->encryptdata['Recipients'] as $rec) {
                 $out .= ' <'.$rec.'>';
             }
-            $out .= ' ]';
-            $out .= ' /EncryptMetadata '.$this->getBooleanString($this->encryptdata['CF']['EncryptMetadata']);
+            $out .= ' ]'."\n"
+                .'/EncryptMetadata '.$this->getBooleanString($this->encryptdata['CF']['EncryptMetadata'])."\n";
         }
         // The event to be used to trigger the authorization
         // that is required to access encryption keys used by this filter.
-        $out .= ' /AuthEvent /'.$this->encryptdata['CF']['AuthEvent'];
+        $out .= '/AuthEvent /'.$this->encryptdata['CF']['AuthEvent']."\n";
         if (!empty($this->encryptdata['CF']['Length'])) {
             // The bit length of the encryption key.
-            $out .= ' /Length '.$this->encryptdata['CF']['Length'];
+            $out .= '/Length '.$this->encryptdata['CF']['Length']."\n";
         }
-        $out .= ' >> >>';
+        $out .= '>>'."\n"
+            .'>>'."\n";
         return $out;
     }
 
@@ -120,26 +119,26 @@ abstract class Output
                 foreach ($this->encryptdata['Recipients'] as $rec) {
                     $out .= ' <'.$rec.'>';
                 }
-                $out .= ' ]';
+                $out .= ' ]'."\n";
             }
         } else {
-            $out .= ' /R';
+            $out .= '/R ';
             if ($this->encryptdata['V'] == 5) { // AES-256
-                $out .= ' 5';
-                $out .= ' /OE ('.$this->escapeString($this->encryptdata['OE']).')';
-                $out .= ' /UE ('.$this->escapeString($this->encryptdata['UE']).')';
-                $out .= ' /Perms ('.$this->escapeString($this->encryptdata['perms']).')';
+                $out .= '5'."\n"
+                    .'/OE ('.$this->escapeString($this->encryptdata['OE']).')'."\n"
+                    .'/UE ('.$this->escapeString($this->encryptdata['UE']).')'."\n"
+                    .'/Perms ('.$this->escapeString($this->encryptdata['perms']).')'."\n";
             } elseif ($this->encryptdata['V'] == 4) { // AES-128
-                $out .= ' 4';
+                $out .= '4'."\n";
             } elseif ($this->encryptdata['V'] < 2) { // RC-40
-                $out .= ' 2';
+                $out .= '2'."\n";
             } else { // RC-128
-                $out .= ' 3';
+                $out .= '3'."\n";
             }
-            $out .= ' /O ('.$this->escapeString($this->encryptdata['O']).')';
-            $out .= ' /U ('.$this->escapeString($this->encryptdata['U']).')';
-            $out .= ' /P '.$this->encryptdata['P'];
-            $out .= ' /EncryptMetadata '.$this->getBooleanString($this->encryptdata['EncryptMetadata']);
+            $out .= '/O ('.$this->escapeString($this->encryptdata['O']).')'."\n"
+                .'/U ('.$this->escapeString($this->encryptdata['U']).')'."\n"
+                .'/P '.$this->encryptdata['P']."\n"
+                .'/EncryptMetadata '.$this->getBooleanString($this->encryptdata['EncryptMetadata'])."\n";
         }
         return $out;
     }

@@ -36,32 +36,36 @@ class OutputTest extends \PHPUnit_Framework_TestCase
     public function testGetPdfEncryptionObjZero()
     {
         $enc = new \Com\Tecnick\Pdf\Encrypt\Encrypt(true, md5('file_id'), 0, array('print'), 'alpha', 'beta');
-        $result = $enc->getPdfEncryptionObj(123);
-        $expected = '3132332030206f626a0a3c3c202f46696c746572202f5374616e64617264202f562031202f4c656e6774682034'
-           .'30202f522032202f4f20280542fa0e15496869a825cd08c633ac10675c5c02167661241f5369895d768278b129'
-           .'202f552028550539dc185e79d4c676f803babbdc50acf8a4427d2de5303d59e7c315b30eba29202f5020323134'
-           .'37343232303038202f456e63727970744d657461646174612074727565203e3e0a656e646f626a';
+        $pon = 122;
+        $result = $enc->getPdfEncryptionObj($pon);
+        $expected = '3132332030206f626a0a3c3c0a2f46696c746572202f5374616e646172640a2f5620310a2f4c656e6774682034300a2'
+        .'f5220320a2f4f20280542fa0e15496869a825cd08c633ac10675c5c02167661241f5369895d768278b1290a2f552028550539dc185'
+        .'e79d4c676f803babbdc50acf8a4427d2de5303d59e7c315b30eba290a2f5020323134373432323030380a2f456e63727970744d657'
+        .'4616461746120747275650a3e3e0a656e646f626a0a';
         $this->assertEquals($expected, bin2hex($result));
     }
 
     public function testGetPdfEncryptionObjOne()
     {
         $enc = new \Com\Tecnick\Pdf\Encrypt\Encrypt(true, md5('file_id'), 1, array('print'), 'alpha', 'beta');
-        $result = $enc->getPdfEncryptionObj(123);
+        $pon = 122;
+        $result = $enc->getPdfEncryptionObj($pon);
         $this->assertTrue(strlen($result) > 150);
     }
 
     public function testGetPdfEncryptionObjTwo()
     {
         $enc = new \Com\Tecnick\Pdf\Encrypt\Encrypt(true, md5('file_id'), 2, array('print'), 'alpha', 'beta');
-        $result = $enc->getPdfEncryptionObj(123);
+        $pon = 122;
+        $result = $enc->getPdfEncryptionObj($pon);
         $this->assertTrue(strlen($result) > 200);
     }
 
     public function testGetPdfEncryptionObjThree()
     {
         $enc = new \Com\Tecnick\Pdf\Encrypt\Encrypt(true, md5('file_id'), 3, array('print'), 'alpha', 'beta');
-        $result = $enc->getPdfEncryptionObj(123);
+        $pon = 122;
+        $result = $enc->getPdfEncryptionObj($pon);
         $this->assertTrue(strlen($result) > 300);
     }
 
@@ -69,7 +73,8 @@ class OutputTest extends \PHPUnit_Framework_TestCase
     {
         $pubkeys = array(array('c' => __DIR__.'/data/cert.pem', 'p' => array('print')));
         $enc = new \Com\Tecnick\Pdf\Encrypt\Encrypt(true, md5('file_id'), 3, array('print'), 'alpha', 'beta', $pubkeys);
-        $result = $enc->getPdfEncryptionObj(123);
+        $pon = 122;
+        $result = $enc->getPdfEncryptionObj($pon);
         $this->assertTrue(strlen($result) > 200);
     }
 
@@ -77,7 +82,8 @@ class OutputTest extends \PHPUnit_Framework_TestCase
     {
         $pubkeys = array(array('c' => __DIR__.'/data/cert.pem', 'p' => array('print')));
         $enc = new \Com\Tecnick\Pdf\Encrypt\Encrypt(true, md5('file_id'), 1, array('print'), 'alpha', 'beta', $pubkeys);
-        $result = $enc->getPdfEncryptionObj(123);
+        $pon = 122;
+        $result = $enc->getPdfEncryptionObj($pon);
         $this->assertTrue(strlen($result) > 100);
     }
 }

@@ -295,4 +295,27 @@ class EncryptTest extends \PHPUnit_Framework_TestCase
         $result = $enc->escapeDataString('(hello world) slash \\'.chr(13));
         $this->assertEquals('ebc28272f4aff661fa0b7764d791fb79', md5($result));
     }
+
+    public function testGetFormattedDate()
+    {
+        $permissions = array(
+            'print',
+            'modify',
+            'copy',
+            'annot-forms',
+            'fill-forms',
+            'extract',
+            'assemble',
+            'print-high'
+        );
+        
+        $enc = new \Com\Tecnick\Pdf\Encrypt\Encrypt(false);
+        $result = $enc->getFormattedDate();
+        $this->assertEquals('(D:', substr($result, 0, 3));
+        $this->assertEquals('+00\'00\')', substr($result, -8));
+        
+        $enc = new \Com\Tecnick\Pdf\Encrypt\Encrypt(true, md5('file_id'), 0, $permissions, 'alpha');
+        $result = $enc->getFormattedDate();
+        $this->assertNotEmpty($result);
+    }
 }

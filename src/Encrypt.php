@@ -146,7 +146,7 @@ class Encrypt extends \Com\Tecnick\Pdf\Encrypt\Compute
     }
 
     /**
-     * Get the encryption data array
+     * Get the encryption data array.
      *
      * @return array
      */
@@ -158,10 +158,10 @@ class Encrypt extends \Com\Tecnick\Pdf\Encrypt\Compute
     /**
      * Encrypt data using the specified encrypt type.
      *
-     * @param string $type   Encrypt type
-     * @param string $data   Data string to encrypt
-     * @param string $key    Encryption key
-     * @param int    $objnum Object number
+     * @param string $type   Encrypt type.
+     * @param string $data   Data string to encrypt.
+     * @param string $key    Encryption key.
+     * @param int    $objnum Object number.
      *
      * @return string Encrypted data string.
      */
@@ -193,7 +193,7 @@ class Encrypt extends \Com\Tecnick\Pdf\Encrypt\Compute
      * Compute encryption key depending on object number where the encrypted data is stored.
      * This is used for all strings and streams without crypt filter specifier.
      *
-     * @param int $objnum Object number
+     * @param int $objnum Object number.
      *
      * @return int
      */
@@ -212,7 +212,7 @@ class Encrypt extends \Com\Tecnick\Pdf\Encrypt\Compute
     /**
      * Convert encryption P value to a string of bytes, low-order byte first.
      *
-     * @param string $protection 32bit encryption permission value (P value)
+     * @param string $protection 32bit encryption permission value (P value).
      *
      * @return string
      */
@@ -253,9 +253,10 @@ class Encrypt extends \Com\Tecnick\Pdf\Encrypt\Compute
     }
 
     /**
-     * Convert hexadecimal string to string
+     * Convert hexadecimal string to string.
      *
-     * @param string $bstr Byte-string to convert
+     * @param string $bstr Byte-string to convert.
+     *
      * @return String
      */
     public function convertHexStringToString($bstr)
@@ -274,9 +275,9 @@ class Encrypt extends \Com\Tecnick\Pdf\Encrypt\Compute
     }
 
     /**
-     * Convert string to hexadecimal string (byte string)
+     * Convert string to hexadecimal string (byte string).
      *
-     * @param string $str String to convert
+     * @param string $str String to convert.
      *
      * @return string
      */
@@ -313,7 +314,7 @@ class Encrypt extends \Com\Tecnick\Pdf\Encrypt\Compute
     }
 
     /**
-     * Escape a string: add "\" before "\", "(" and ")"
+     * Escape a string: add "\" before "\", "(" and ")".
      *
      * @param string $str String to escape.
      *
@@ -325,10 +326,10 @@ class Encrypt extends \Com\Tecnick\Pdf\Encrypt\Compute
     }
 
     /**
-     * Encrypt a string
+     * Encrypt a string.
      *
-     * @param string $str    String to encrypt
-     * @param int    $objnum Object ID
+     * @param string $str    String to encrypt.
+     * @param int    $objnum Object ID.
      *
      * @return string
      */
@@ -338,15 +339,31 @@ class Encrypt extends \Com\Tecnick\Pdf\Encrypt\Compute
     }
 
     /**
-     * Format a data string for meta information
+     * Format a data string for meta information.
      *
-     * @param string $str    Data string to escape
-     * @param int    $objnum Object ID
+     * @param string $str    Data string to escape.
+     * @param int    $objnum Object ID.
      *
      * @return string
      */
     public function escapeDataString($str, $objnum = null)
     {
         return '('.$this->escapeString($this->encryptString($str, $objnum)).')';
+    }
+
+    /**
+     * Returns a formatted date-time.
+     *
+     * @param int $time   UTC time measured in the number of seconds since the Unix Epoch (January 1 1970 00:00:00 GMT).
+     * @param int $objnum Object ID.
+     *
+     * @return string escaped date string.
+     */
+    public function getFormattedDate($time = null, $objnum = null)
+    {
+        if ($time === null) {
+            $time = time(); // get current UTC time
+        }
+        return $this->escapeDataString('D:'.substr_replace(date('YmdHisO', intval($time)), '\'', -2, 0).'\'', $objnum);
     }
 }
