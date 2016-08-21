@@ -130,7 +130,6 @@ abstract class Compute extends \Com\Tecnick\Pdf\Encrypt\Data
             $this->encryptdata['owner_password'].$this->encryptdata['OVS'].$this->encryptdata['U'],
             true
         ).$this->encryptdata['OVS'].$this->encryptdata['OKS'];
-
     }
 
     /**
