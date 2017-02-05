@@ -17,8 +17,13 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-%(%{__id_u} -n)
 BuildArch: noarch
 
 Requires:  php(language) >= 5.4.0
+Requires:  php-date
+Requires:  php-hash
+Requires:  php-mcrypt
+Requires:  php-openssl
 Requires:  php-pcre
-Requires:  php-zlib
+Requires:  php-posix
+Requires:  openssl
 
 Provides:  php-composer(%{c_vendor}/%{gh_project}) = %{version}
 Provides:  php-%{gh_project} = %{version}
