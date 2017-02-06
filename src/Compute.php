@@ -226,20 +226,25 @@ abstract class Compute extends \Com\Tecnick\Pdf\Encrypt\Data
                 sys_get_temp_dir(),
                 '__tcpdf_enc_'.md5($this->encryptdata['fileid'].$envelope).'_'
             );
-            if (!function_exists('openssl_pkcs7_encrypt')
-                || !openssl_pkcs7_encrypt(
-                    $tempkeyfile,
-                    $tempencfile,
-                    file_get_contents($pubkey['c']),
-                    array(),
-                    PKCS7_BINARY | PKCS7_DETACHED
-                )
-            ) {
+
+            if (!function_exists('openssl_pkcs7_encrypt')) {
                 throw new EncException(
                     'Unable to encrypt the file: '.$tempkeyfile."\n"
                     .'Public-Key Security requires openssl_pkcs7_encrypt.'
                 );
+            } elseif (!openssl_pkcs7_encrypt(
+                $tempkeyfile,
+                $tempencfile,
+                file_get_contents($pubkey['c']),
+                array(),
+                PKCS7_BINARY
+            )) {
+                throw new EncException(
+                    'Unable to encrypt the file: '.$tempkeyfile."\n"
+                    .'OpenSSL error: ' . openssl_error_string()
+                );
             }
+
             // read encryption signature
             $signature = file_get_contents($tempencfile);
             // extract signature
