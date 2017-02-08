@@ -39,9 +39,13 @@ class RCFourTest extends \PHPUnit_Framework_TestCase
     public function testEncrypt()
     {
         $data = 'alpha';
-        $key = 'beta';
+        $key = '0123456789abcdef'; // 16 bytes = 128 bit KEY
+
+        $enc_osl = $this->obj->encrypt($data, $key, 'openssl');
         $enc_ext = $this->obj->encrypt($data, $key, 'mcrypt');
         $enc_raw = $this->obj->encrypt($data, $key, 'raw');
+
+        $this->assertEquals($enc_osl, $enc_raw);
         $this->assertEquals($enc_ext, $enc_raw);
     }
 

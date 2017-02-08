@@ -41,11 +41,19 @@ class RCFour
      *
      * @return string Encrypted data string.
      */
-    public function encrypt($data, $key, $mode = 'mcrypt')
+    public function encrypt($data, $key, $mode = 'openssl')
     {
+        if (($mode == 'openssl')
+            && extension_loaded('openssl')
+            && in_array('rc4-40', openssl_get_cipher_methods())
+        ) {
+            return $this->encryptOpenSsl($data, $key);
+        }
+
         if (($mode == 'mcrypt') && function_exists('mcrypt_encrypt') && ($out = $this->encryptMcrypt($data, $key))) {
             return $out;
         }
+
         return $this->encryptRaw($data, $key);
     }
 
@@ -60,6 +68,24 @@ class RCFour
     public function encryptMcrypt($data, $key)
     {
         return mcrypt_encrypt(MCRYPT_ARCFOUR, $key, $data, MCRYPT_MODE_STREAM, '');
+    }
+
+    /**
+     * Encrypt the data using OpenSSL
+     *
+     * @param string $data Data string to encrypt
+     * @param string $key  Encryption key
+     *
+     * @return string Encrypted data string.
+     */
+    protected function encryptOpenSsl($data, $key)
+    {
+        return openssl_encrypt(
+            $data,
+            'rc4-40',
+            $key,
+            OPENSSL_RAW_DATA | OPENSSL_ZERO_PADDING
+        );
     }
 
     /**
