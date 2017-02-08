@@ -19,7 +19,6 @@ BuildArch: noarch
 Requires:  php(language) >= 5.4.0
 Requires:  php-date
 Requires:  php-hash
-Requires:  php-mcrypt
 Requires:  php-openssl
 Requires:  php-pcre
 Requires:  php-posix

@@ -228,10 +228,12 @@ abstract class Compute extends \Com\Tecnick\Pdf\Encrypt\Data
             );
 
             if (!function_exists('openssl_pkcs7_encrypt')) {
+                // @codeCoverageIgnoreStart
                 throw new EncException(
                     'Unable to encrypt the file: '.$tempkeyfile."\n"
                     .'Public-Key Security requires openssl_pkcs7_encrypt.'
                 );
+                // @codeCoverageIgnoreEnd
             } elseif (!openssl_pkcs7_encrypt(
                 $tempkeyfile,
                 $tempencfile,

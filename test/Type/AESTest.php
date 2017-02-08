@@ -36,18 +36,37 @@ class AESTest extends \PHPUnit_Framework_TestCase
         $this->obj = new \Com\Tecnick\Pdf\Encrypt\Type\AES();
     }
 
+    public function testEncrypt128()
+    {
+        $data = 'alpha';
+        $key = '0123456789abcdef'; // 16 bytes = 128 bit KEY
+
+        $enc_a = $this->obj->encrypt($data, $key);
+        $enc_b = $this->obj->encrypt($data, $key, 'aes-128-cbc');
+        $this->assertEquals(strlen($enc_a), strlen($enc_b));
+        
+        $eobj = new \Com\Tecnick\Pdf\Encrypt\Type\AESSixteen();
+        $enc_c = $eobj->encrypt($data, $key);
+        $this->assertEquals(strlen($enc_a), strlen($enc_c));
+    }
+
+    public function testEncrypt256()
+    {
+        $data = 'alpha';
+        $key = '0123456789abcdef0123456789abcdef'; // 32 bytes = 256 bit KEY
+
+        $enc_a = $this->obj->encrypt($data, $key, '');
+        $enc_b = $this->obj->encrypt($data, $key, 'aes-256-cbc');
+        $this->assertEquals(strlen($enc_a), strlen($enc_b));
+        
+        $eobj = new \Com\Tecnick\Pdf\Encrypt\Type\AESThirtytwo();
+        $enc_c = $eobj->encrypt($data, $key);
+        $this->assertEquals(strlen($enc_a), strlen($enc_c));
+    }
+
     public function testEncryptException()
     {
         $this->setExpectedException('\Com\Tecnick\Pdf\Encrypt\Exception');
-        $this->obj->encrypt('', '', 'raw');
-    }
-
-    public function testEncrypt()
-    {
-        $data = 'alpha beta';
-        $key  = 'gamma';
-        $enc_os = $this->obj->encrypt($data, $key, 'openssl');
-        $enc_mc = $this->obj->encrypt($data, $key, 'mcrypt');
-        $this->assertEquals(strlen($enc_os), strlen($enc_mc));
+        $this->obj->encrypt('alpha', '12345', 'ERROR');
     }
 }

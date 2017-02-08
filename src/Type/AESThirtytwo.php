@@ -1,12 +1,12 @@
 <?php
 /**
- * AES.php
+ * AESThirtytwo.php
  *
  * @since       2011-05-23
  * @category    Library
  * @package     PdfEncrypt
  * @author      Nicola Asuni <info@tecnick.com>
- * @copyright   2011-2015 Nicola Asuni - Tecnick.com LTD
+ * @copyright   2011-2017 Nicola Asuni - Tecnick.com LTD
  * @license     http://www.gnu.org/copyleft/lesser.html GNU-LGPL v3 (see LICENSE.TXT)
  * @link        https://github.com/tecnickcom/tc-lib-pdf-encrypt
  *
@@ -16,46 +16,35 @@
 namespace Com\Tecnick\Pdf\Encrypt\Type;
 
 use \Com\Tecnick\Pdf\Encrypt\Exception as EncException;
-use \Com\Tecnick\Pdf\Encrypt\Type\AESnopad;
+use \Com\Tecnick\Pdf\Encrypt\Type\AES;
 
 /**
- * Com\Tecnick\Pdf\Encrypt\Type\AES
+ * Com\Tecnick\Pdf\Encrypt\Type\AESThirtytwo
  *
- * AES
+ * AESThirtytwo
+ * 32 bytes = 256 bit
  *
  * @since       2011-05-23
  * @category    Library
  * @package     PdfEncrypt
  * @author      Nicola Asuni <info@tecnick.com>
- * @copyright   2011-2015 Nicola Asuni - Tecnick.com LTD
+ * @copyright   2011-2017 Nicola Asuni - Tecnick.com LTD
  * @license     http://www.gnu.org/copyleft/lesser.html GNU-LGPL v3 (see LICENSE.TXT)
  * @link        https://github.com/tecnickcom/tc-lib-pdf-encrypt
  */
-class AES
+class AESThirtytwo
 {
     /**
      * Encrypt the data using OpenSSL
      *
      * @param string $data  Data string to encrypt
      * @param string $key   Encryption key
-     * @param string $mode  Cipher
      *
      * @return string Encrypted data string.
      */
-    public function encrypt($data, $key, $mode = '')
+    public function encrypt($data, $key)
     {
-        if (empty($mode)) {
-            if (strlen($key) > 16) {
-                $mode = 'aes-256-cbc';
-            } else {
-                $mode = 'aes-128-cbc';
-            }
-        } elseif (!in_array($mode, array('aes-128-cbc', 'aes-256-cbc'))) {
-            throw new EncException('unknown chipher: '.$mode);
-        }
-
-        $ivect = openssl_random_pseudo_bytes(openssl_cipher_iv_length($mode));
-        $obj = new AESnopad();
-        return $ivect.$obj->encrypt($data, $key, $ivect, $mode);
+        $obj = new AES();
+        return $obj->encrypt($data, $key, 'aes-256-cbc');
     }
 }

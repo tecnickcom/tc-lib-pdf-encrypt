@@ -127,12 +127,16 @@ abstract class Data extends \Com\Tecnick\Pdf\Encrypt\Output
      * @var array
      */
     protected static $encmap = array(
-        0          => 'RCFour',        // RC4-40
-        1          => 'RCFour',        // RC4-128
-        2          => 'AES',           // AES-128
-        3          => 'AES',           // AES-256
-        'RC4'      => 'RCFour',        // RC4
-        'AES'      => 'AES',           // AES
+        0          => 'RCFourFive',    // RC4-40
+        1          => 'RCFourSixteen', // RC4-128
+        2          => 'AESSixteen',    // AES-128
+        3          => 'AESThirtytwo',  // AES-256
+        'RC4'      => 'RCFour',        // RC4-40
+        'RC4-40'   => 'RCFourFive',    // RC4-40
+        'RC4-128'  => 'RCFourSixteen', // RC4-128
+        'AES'      => 'AES',           // AES-256
+        'AES-128'  => 'AESSixteen',    // AES-128
+        'AES-256'  => 'AESThirtytwo',  // AES-256
         'AESnopad' => 'AESnopad',      // AES - no padding
         'MD5-16'   => 'MDFiveSixteen', // MD5-16
         'seed'     => 'Seed',          // Random seed string

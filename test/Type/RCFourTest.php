@@ -6,7 +6,7 @@
  * @category    Library
  * @package     PdfEncrypt
  * @author      Nicola Asuni <info@tecnick.com>
- * @copyright   2011-2015 Nicola Asuni - Tecnick.com LTD
+ * @copyright   2011-2017 Nicola Asuni - Tecnick.com LTD
  * @license     http://www.gnu.org/copyleft/lesser.html GNU-LGPL v3 (see LICENSE.TXT)
  * @link        https://github.com/tecnickcom/tc-lib-pdf-encrypt
  *
@@ -22,7 +22,7 @@ namespace Test;
  * @category    Library
  * @package     PdfEncrypt
  * @author      Nicola Asuni <info@tecnick.com>
- * @copyright   2011-2015 Nicola Asuni - Tecnick.com LTD
+ * @copyright   2011-2017 Nicola Asuni - Tecnick.com LTD
  * @license     http://www.gnu.org/copyleft/lesser.html GNU-LGPL v3 (see LICENSE.TXT)
  * @link        https://github.com/tecnickcom/tc-lib-pdf-encrypt
  */
@@ -36,25 +36,37 @@ class RCFourTest extends \PHPUnit_Framework_TestCase
         $this->obj = new \Com\Tecnick\Pdf\Encrypt\Type\RCFour();
     }
 
-    public function testEncrypt()
+    public function testEncrypt40()
+    {
+        $data = 'alpha';
+        $key = '12345'; // 5 bytes = 40 bit KEY
+
+        $enc_a = $this->obj->encrypt($data, $key, '');
+        $enc_b = $this->obj->encrypt($data, $key, 'RC4-40');
+        $this->assertEquals($enc_a, $enc_b);
+        
+        $eobj = new \Com\Tecnick\Pdf\Encrypt\Type\RCFourFive();
+        $enc_c = $eobj->encrypt($data, $key);
+        $this->assertEquals($enc_a, $enc_c);
+    }
+
+    public function testEncrypt128()
     {
         $data = 'alpha';
         $key = '0123456789abcdef'; // 16 bytes = 128 bit KEY
 
-        $enc_osl = $this->obj->encrypt($data, $key, 'openssl');
-        $enc_ext = $this->obj->encrypt($data, $key, 'mcrypt');
-        $enc_raw = $this->obj->encrypt($data, $key, 'raw');
-
-        $this->assertEquals($enc_osl, $enc_raw);
-        $this->assertEquals($enc_ext, $enc_raw);
+        $enc_a = $this->obj->encrypt($data, $key);
+        $enc_b = $this->obj->encrypt($data, $key, 'RC4');
+        $this->assertEquals($enc_a, $enc_b);
+        
+        $eobj = new \Com\Tecnick\Pdf\Encrypt\Type\RCFourSixteen();
+        $enc_c = $eobj->encrypt($data, $key);
+        $this->assertEquals($enc_a, $enc_c);
     }
 
-    public function testEncryptModes()
+    public function testEncryptException()
     {
-        $data = 'alpha';
-        $key = 'beta';
-        $enc_ext = $this->obj->encryptMcrypt($data, $key);
-        $enc_raw = $this->obj->encryptRaw($data, $key);
-        $this->assertEquals($enc_ext, $enc_raw);
+        $this->setExpectedException('\Com\Tecnick\Pdf\Encrypt\Exception');
+        $this->obj->encrypt('alpha', '12345', 'ERROR');
     }
 }

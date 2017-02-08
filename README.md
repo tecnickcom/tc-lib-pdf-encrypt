@@ -33,8 +33,7 @@ The initial source code has been derived from [TCPDF](<http://www.tcpdf.org>).
 
 ## Getting started
 
-This library requires openssl and mcrypt php extensions to be able to test all functionalities.
-On production either openssl or mcrypt are required.
+This library requires the openssl php extension.
 
 First, you need to install all development dependencies using [Composer](https://getcomposer.org/):
 

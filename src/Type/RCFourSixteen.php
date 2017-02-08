@@ -1,6 +1,6 @@
 <?php
 /**
- * RCFour.php
+ * RCFourSixteen.php
  *
  * @since       2011-05-23
  * @category    Library
@@ -16,11 +16,13 @@
 namespace Com\Tecnick\Pdf\Encrypt\Type;
 
 use \Com\Tecnick\Pdf\Encrypt\Exception as EncException;
+use \Com\Tecnick\Pdf\Encrypt\Type\RCFour;
 
 /**
- * Com\Tecnick\Pdf\Encrypt\Type\RCFour
+ * Com\Tecnick\Pdf\Encrypt\Type\RCFourSixteen
  *
- * RC4 is the standard encryption algorithm used in PDF format
+ * RC4-40 is the standard encryption algorithm used in PDF format
+ * The key length is 16 bytes (128 bits)
  *
  * @since       2011-05-23
  * @category    Library
@@ -30,34 +32,19 @@ use \Com\Tecnick\Pdf\Encrypt\Exception as EncException;
  * @license     http://www.gnu.org/copyleft/lesser.html GNU-LGPL v3 (see LICENSE.TXT)
  * @link        https://github.com/tecnickcom/tc-lib-pdf-encrypt
  */
-class RCFour
+class RCFourSixteen
 {
     /**
      * Encrypt the data
      *
      * @param string $data Data string to encrypt
      * @param string $key  Encryption key
-     * @param string $mode Cipher
      *
      * @return string Encrypted data string.
      */
-    public function encrypt($data, $key, $mode = '')
+    public function encrypt($data, $key)
     {
-        if (empty($mode)) {
-            if (strlen($key) > 5) {
-                $mode = 'RC4';
-            } else {
-                $mode = 'RC4-40';
-            }
-        } elseif (!in_array($mode, array('RC4', 'RC4-40'))) {
-            throw new EncException('unknown chipher: '.$mode);
-        }
-
-        return openssl_encrypt(
-            $data,
-            $mode,
-            $key,
-            OPENSSL_RAW_DATA | OPENSSL_ZERO_PADDING
-        );
+        $obj = new RCFour();
+        return $obj->encrypt($data, $key, 'RC4');
     }
 }
