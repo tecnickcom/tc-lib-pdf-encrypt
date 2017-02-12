@@ -15,6 +15,8 @@
 
 namespace Test;
 
+use PHPUnit\Framework\TestCase;
+
 /**
  * Encrypt Test
  *
@@ -26,23 +28,27 @@ namespace Test;
  * @license     http://www.gnu.org/copyleft/lesser.html GNU-LGPL v3 (see LICENSE.TXT)
  * @link        https://github.com/tecnickcom/tc-lib-pdf-encrypt
  */
-class EncryptTest extends \PHPUnit_Framework_TestCase
+class EncryptTest extends TestCase
 {
     public function setUp()
     {
         //$this->markTestSkipped(); // skip this test
     }
 
+    /**
+     * @expectedException \Com\Tecnick\Pdf\Encrypt\Exception
+     */
     public function testEncryptException()
     {
-        $this->setExpectedException('\Com\Tecnick\Pdf\Encrypt\Exception');
         $enc = new \Com\Tecnick\Pdf\Encrypt\Encrypt(true, md5('file_id'));
         $enc->encrypt('WRONG');
     }
 
+    /**
+     * @expectedException \Com\Tecnick\Pdf\Encrypt\Exception
+     */
     public function testEncryptModeException()
     {
-        $this->setExpectedException('\Com\Tecnick\Pdf\Encrypt\Exception');
         new \Com\Tecnick\Pdf\Encrypt\Encrypt(true, md5('file_id'), 4);
     }
 
@@ -92,9 +98,12 @@ class EncryptTest extends \PHPUnit_Framework_TestCase
         $this->assertEquals(32, strlen($result));
     }
 
+
+    /**
+     * @expectedException \Com\Tecnick\Pdf\Encrypt\Exception
+     */
     public function testEncryptPubException()
     {
-        $this->setExpectedException('\Com\Tecnick\Pdf\Encrypt\Exception');
         new \Com\Tecnick\Pdf\Encrypt\Encrypt(
             true,
             md5('file_id'),

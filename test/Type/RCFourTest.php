@@ -15,6 +15,8 @@
 
 namespace Test;
 
+use PHPUnit\Framework\TestCase;
+
 /**
  * RC4 encryption Test
  *
@@ -26,7 +28,7 @@ namespace Test;
  * @license     http://www.gnu.org/copyleft/lesser.html GNU-LGPL v3 (see LICENSE.TXT)
  * @link        https://github.com/tecnickcom/tc-lib-pdf-encrypt
  */
-class RCFourTest extends \PHPUnit_Framework_TestCase
+class RCFourTest extends TestCase
 {
     protected $obj;
     
@@ -64,9 +66,11 @@ class RCFourTest extends \PHPUnit_Framework_TestCase
         $this->assertEquals($enc_a, $enc_c);
     }
 
+    /**
+     * @expectedException \Com\Tecnick\Pdf\Encrypt\Exception
+     */
     public function testEncryptException()
     {
-        $this->setExpectedException('\Com\Tecnick\Pdf\Encrypt\Exception');
         $this->obj->encrypt('alpha', '12345', 'ERROR');
     }
 }
