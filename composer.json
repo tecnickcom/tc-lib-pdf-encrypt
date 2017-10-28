@@ -17,7 +17,9 @@
         "ext-date": "*",
         "ext-hash": "*",
         "ext-openssl": "*",
-        "ext-pcre": "*",
+        "ext-pcre": "*"
+    },
+    "suggest": {
         "ext-posix": "*"
     },
     "require-dev": {
