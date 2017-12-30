@@ -52,12 +52,6 @@ class RCFour
         } elseif (!in_array($mode, array('RC4', 'RC4-40'))) {
             throw new EncException('unknown chipher: '.$mode);
         }
-
-        return openssl_encrypt(
-            $data,
-            $mode,
-            $key,
-            OPENSSL_RAW_DATA | OPENSSL_ZERO_PADDING
-        );
+        return openssl_encrypt($data, $mode, $key, OPENSSL_RAW_DATA | OPENSSL_ZERO_PADDING);
     }
 }
