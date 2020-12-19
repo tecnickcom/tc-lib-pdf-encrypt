@@ -16,6 +16,7 @@
 namespace Test;
 
 use PHPUnit\Framework\TestCase;
+use \Test\TestUtil;
 
 /**
  * RC4 encryption Test
@@ -28,23 +29,21 @@ use PHPUnit\Framework\TestCase;
  * @license     http://www.gnu.org/copyleft/lesser.html GNU-LGPL v3 (see LICENSE.TXT)
  * @link        https://github.com/tecnickcom/tc-lib-pdf-encrypt
  */
-class RCFourTest extends TestCase
+class RCFourTest extends TestUtil
 {
-    protected $obj;
-    
-    public function setUp()
+    protected function getTestObject()
     {
-        //$this->markTestSkipped(); // skip this test
-        $this->obj = new \Com\Tecnick\Pdf\Encrypt\Type\RCFour();
+        return new \Com\Tecnick\Pdf\Encrypt\Type\RCFour();
     }
 
     public function testEncrypt40()
     {
+        $testObj = $this->getTestObject();
         $data = 'alpha';
         $key = '12345'; // 5 bytes = 40 bit KEY
 
-        $enc_a = $this->obj->encrypt($data, $key, '');
-        $enc_b = $this->obj->encrypt($data, $key, 'RC4-40');
+        $enc_a = $testObj->encrypt($data, $key, '');
+        $enc_b = $testObj->encrypt($data, $key, 'RC4-40');
         $this->assertEquals($enc_a, $enc_b);
         
         $eobj = new \Com\Tecnick\Pdf\Encrypt\Type\RCFourFive();
@@ -54,11 +53,12 @@ class RCFourTest extends TestCase
 
     public function testEncrypt128()
     {
+        $testObj = $this->getTestObject();
         $data = 'alpha';
         $key = '0123456789abcdef'; // 16 bytes = 128 bit KEY
 
-        $enc_a = $this->obj->encrypt($data, $key);
-        $enc_b = $this->obj->encrypt($data, $key, 'RC4');
+        $enc_a = $testObj->encrypt($data, $key);
+        $enc_b = $testObj->encrypt($data, $key, 'RC4');
         $this->assertEquals($enc_a, $enc_b);
         
         $eobj = new \Com\Tecnick\Pdf\Encrypt\Type\RCFourSixteen();
@@ -66,11 +66,10 @@ class RCFourTest extends TestCase
         $this->assertEquals($enc_a, $enc_c);
     }
 
-    /**
-     * @expectedException \Com\Tecnick\Pdf\Encrypt\Exception
-     */
     public function testEncryptException()
     {
-        $this->obj->encrypt('alpha', '12345', 'ERROR');
+        $this->bcExpectException('\Com\Tecnick\Pdf\Encrypt\Exception');
+        $testObj = $this->getTestObject();
+        $testObj->encrypt('alpha', '12345', 'ERROR');
     }
 }

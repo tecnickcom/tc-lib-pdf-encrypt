@@ -16,6 +16,7 @@
 namespace Test;
 
 use PHPUnit\Framework\TestCase;
+use \Test\TestUtil;
 
 /**
  * MD5-16 encryption Test
@@ -28,19 +29,17 @@ use PHPUnit\Framework\TestCase;
  * @license     http://www.gnu.org/copyleft/lesser.html GNU-LGPL v3 (see LICENSE.TXT)
  * @link        https://github.com/tecnickcom/tc-lib-pdf-encrypt
  */
-class MDFiveSixteenTest extends TestCase
+class MDFiveSixteenTest extends TestUtil
 {
-    protected $obj;
-    
-    public function setUp()
+    protected function getTestObject()
     {
-        //$this->markTestSkipped(); // skip this test
-        $this->obj = new \Com\Tecnick\Pdf\Encrypt\Type\MDFiveSixteen();
+        return new \Com\Tecnick\Pdf\Encrypt\Type\MDFiveSixteen();
     }
 
     public function testEncrypt()
     {
-        $result = $this->obj->encrypt('hello');
+        $testObj = $this->getTestObject();
+        $result = $testObj->encrypt('hello');
         $this->assertEquals('5d41402abc4b2a76b9719d911017c592', bin2hex($result));
     }
 }

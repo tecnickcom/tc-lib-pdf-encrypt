@@ -16,6 +16,7 @@
 namespace Test;
 
 use PHPUnit\Framework\TestCase;
+use \Test\TestUtil;
 
 /**
  * Seed Test
@@ -28,25 +29,24 @@ use PHPUnit\Framework\TestCase;
  * @license     http://www.gnu.org/copyleft/lesser.html GNU-LGPL v3 (see LICENSE.TXT)
  * @link        https://github.com/tecnickcom/tc-lib-pdf-encrypt
  */
-class SeedTest extends TestCase
+class SeedTest extends TestUtil
 {
-    protected $obj;
-    
-    public function setUp()
+    protected function getTestObject()
     {
-        //$this->markTestSkipped(); // skip this test
-        $this->obj = new \Com\Tecnick\Pdf\Encrypt\Type\Seed();
+        return new \Com\Tecnick\Pdf\Encrypt\Type\Seed();
     }
 
     public function testEncrypt()
     {
-        $result = $this->obj->encrypt('hello', 'world');
+        $testObj = $this->getTestObject();
+        $result = $testObj->encrypt('hello', 'world');
         $this->assertNotEmpty($result);
     }
 
     public function testEncryptRaw()
     {
-        $result = $this->obj->encrypt('hello', 'world', 'raw');
+        $testObj = $this->getTestObject();
+        $result = $testObj->encrypt('hello', 'world', 'raw');
         $this->assertNotEmpty($result);
     }
 }

@@ -28,13 +28,8 @@ use PHPUnit\Framework\TestCase;
  * @license     http://www.gnu.org/copyleft/lesser.html GNU-LGPL v3 (see LICENSE.TXT)
  * @link        https://github.com/tecnickcom/tc-lib-pdf-encrypt
  */
-class OutputTest extends TestCase
+class OutputTest extends TestUtil
 {
-    public function setUp()
-    {
-        //$this->markTestSkipped(); // skip this test
-    }
-
     public function testGetPdfEncryptionObjZero()
     {
         $enc = new \Com\Tecnick\Pdf\Encrypt\Encrypt(true, md5('file_id'), 0, array('print'), 'alpha', 'beta');
