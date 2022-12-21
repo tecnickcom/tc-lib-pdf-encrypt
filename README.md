@@ -25,6 +25,38 @@ PHP library to encrypt data for PDF.
 The initial source code has been derived from [TCPDF](<http://www.tcpdf.org>).
 
 
+### OpenSSL 3
+
+When using OpenSSL 3 some legacy providers are disabled by default.
+This will trigger the following error when executing the test:
+
+    error:0308010C:digital envelope routines::unsupported
+
+To enable legacy providers, follow the instructions at: https://wiki.openssl.org/index.php/OpenSSL_3.0#Providers
+
+```bash
+sudo nano /etc/ssl/openssl.cnf
+```
+
+```bash
+   openssl_conf = openssl_init
+
+   [openssl_init]
+   providers = provider_sect
+   
+   [provider_sect]
+   default = default_sect
+   legacy = legacy_sect
+   
+   [default_sect]
+   activate = 1
+   
+   [legacy_sect]
+   activate = 1
+```
+
+
+
 ## Getting started
 
 This library requires the openssl php extension.

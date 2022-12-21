@@ -77,7 +77,7 @@ class Encrypt extends \Com\Tecnick\Pdf\Encrypt\Compute
      *                            For example:
      *                            array(array('c' => 'file://../examples/data/cert/test.crt', 'p' => array('print')))
      *                            To create self-signed certificate:
-     *                            openssl req -x509 -nodes -days 365000 -newkey rsa:1024 -keyout key.pem -out cert.pem
+     *                            openssl req -x509 -nodes -days 365000 -newkey rsa:1024 -keyout cert.pem -out cert.pem
      *                            To export crt to p12: openssl pkcs12 -export -in cert.pem -out cert.p12
      *                            To convert pfx certificate to pem: openssl pkcs12 -in cert.pfx -out cert.pem -nodes
      */

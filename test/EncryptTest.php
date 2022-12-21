@@ -105,6 +105,7 @@ class EncryptTest extends TestUtil
 
     public function testEncryptModZeroPub()
     {
+        error_reporting(E_ALL); // DEBUG
         $pubkeys = array(array('c' => __DIR__.'/data/cert.pem', 'p' => array('print')));
         $enc = new \Com\Tecnick\Pdf\Encrypt\Encrypt(
             true,
@@ -116,6 +117,8 @@ class EncryptTest extends TestUtil
             $pubkeys
         );
         $result = $enc->encrypt(1, 'alpha');
+        // Check for "error:0308010C:digital envelope routines::unsupported" when using OpenSSL 3.
+        // var_dump(openssl_error_string());
         $this->assertEquals(5, strlen($result));
     }
 
