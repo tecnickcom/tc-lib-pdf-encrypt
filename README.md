@@ -30,9 +30,11 @@ The initial source code has been derived from [TCPDF](<http://www.tcpdf.org>).
 When using OpenSSL 3 some legacy providers are disabled by default.
 This will trigger the following error when executing the test:
 
-    error:0308010C:digital envelope routines::unsupported
+```
+error:0308010C:digital envelope routines::unsupported
+```
 
-To enable legacy providers, follow the instructions at: https://wiki.openssl.org/index.php/OpenSSL_3.0#Providers
+Legacy provider can be enabled by followign the instructions at: https://wiki.openssl.org/index.php/OpenSSL_3.0#Providers
 
 ```bash
 sudo nano /etc/ssl/openssl.cnf
@@ -55,7 +57,12 @@ sudo nano /etc/ssl/openssl.cnf
    activate = 1
 ```
 
+An alternative OpenSSL configuration file is provided on and set by default in the Makefile.
+To overrride the custom OpenSSL configuration file set the following environment variable:
 
+```bash
+export OPENSSL_CONF=/etc/ssl/openssl.cnf
+```
 
 ## Getting started
 

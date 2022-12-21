@@ -80,13 +80,18 @@ COMPOSER=$(PHP) -d "apc.enable_cli=0" $(shell which composer)
 # phpDocumentor executable file
 PHPDOC=$(shell which phpDocumentor)
 
+# Set default OpenSSL configuration file
+ifeq ($(OPENSSL_CONF),)
+	OPENSSL_CONF=$(CURRENTDIR)openssl.cnf
+endif
+
 # --- MAKE TARGETS ---
 
 # Display general help about this command
 .PHONY: help
 help:
 	@echo ""
-	@echo "$(PROJECT) Makefile."
+	@echo "$(PROJECT) $(OPENSSL_CONF) Makefile."
 	@echo "The following commands are available:"
 	@echo ""
 	@echo "  make buildall : Build and test everything from scratch"
@@ -252,7 +257,7 @@ tag:
 # Run unit tests
 .PHONY: test
 test:
-	./vendor/bin/phpunit test
+	OPENSSL_CONF=${OPENSSL_CONF} ./vendor/bin/phpunit test
 
 # Remove all installed files
 .PHONY: uninstall
