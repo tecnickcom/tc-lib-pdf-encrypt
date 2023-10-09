@@ -1,4 +1,5 @@
 <?php
+
 /**
  * MDFiveSixteen.php
  *
@@ -15,7 +16,7 @@
 
 namespace Com\Tecnick\Pdf\Encrypt\Type;
 
-use \Com\Tecnick\Pdf\Encrypt\Exception as EncException;
+use Com\Tecnick\Pdf\Encrypt\Exception as EncException;
 
 /**
  * Com\Tecnick\Pdf\Encrypt\Type\MDFiveSixteen

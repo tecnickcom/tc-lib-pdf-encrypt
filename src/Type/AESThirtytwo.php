@@ -1,4 +1,5 @@
 <?php
+
 /**
  * AESThirtytwo.php
  *
@@ -15,8 +16,8 @@
 
 namespace Com\Tecnick\Pdf\Encrypt\Type;
 
-use \Com\Tecnick\Pdf\Encrypt\Exception as EncException;
-use \Com\Tecnick\Pdf\Encrypt\Type\AES;
+use Com\Tecnick\Pdf\Encrypt\Exception as EncException;
+use Com\Tecnick\Pdf\Encrypt\Type\AES;
 
 /**
  * Com\Tecnick\Pdf\Encrypt\Type\AESThirtytwo

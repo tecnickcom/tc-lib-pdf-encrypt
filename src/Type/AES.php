@@ -1,4 +1,5 @@
 <?php
+
 /**
  * AES.php
  *
@@ -15,8 +16,8 @@
 
 namespace Com\Tecnick\Pdf\Encrypt\Type;
 
-use \Com\Tecnick\Pdf\Encrypt\Exception as EncException;
-use \Com\Tecnick\Pdf\Encrypt\Type\AESnopad;
+use Com\Tecnick\Pdf\Encrypt\Exception as EncException;
+use Com\Tecnick\Pdf\Encrypt\Type\AESnopad;
 
 /**
  * Com\Tecnick\Pdf\Encrypt\Type\AES
@@ -51,11 +52,11 @@ class AES
                 $mode = 'aes-128-cbc';
             }
         } elseif (!in_array($mode, array('aes-128-cbc', 'aes-256-cbc'))) {
-            throw new EncException('unknown chipher: '.$mode);
+            throw new EncException('unknown chipher: ' . $mode);
         }
 
         $ivect = openssl_random_pseudo_bytes(openssl_cipher_iv_length($mode));
         $obj = new AESnopad();
-        return $ivect.$obj->encrypt($data, $key, $ivect, $mode);
+        return $ivect . $obj->encrypt($data, $key, $ivect, $mode);
     }
 }

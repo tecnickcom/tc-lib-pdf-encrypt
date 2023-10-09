@@ -1,4 +1,5 @@
 <?php
+
 /**
  * RCFour.php
  *
@@ -15,7 +16,7 @@
 
 namespace Com\Tecnick\Pdf\Encrypt\Type;
 
-use \Com\Tecnick\Pdf\Encrypt\Exception as EncException;
+use Com\Tecnick\Pdf\Encrypt\Exception as EncException;
 
 /**
  * Com\Tecnick\Pdf\Encrypt\Type\RCFour
@@ -50,7 +51,7 @@ class RCFour
                 $mode = 'RC4-40';
             }
         } elseif (!in_array($mode, array('RC4', 'RC4-40'))) {
-            throw new EncException('unknown chipher: '.$mode);
+            throw new EncException('unknown chipher: ' . $mode);
         }
         return openssl_encrypt($data, $mode, $key, OPENSSL_RAW_DATA | OPENSSL_ZERO_PADDING);
     }

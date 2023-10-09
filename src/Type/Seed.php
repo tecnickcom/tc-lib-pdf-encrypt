@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Seed.php
  *
@@ -15,7 +16,7 @@
 
 namespace Com\Tecnick\Pdf\Encrypt\Type;
 
-use \Com\Tecnick\Pdf\Encrypt\Exception as EncException;
+use Com\Tecnick\Pdf\Encrypt\Exception as EncException;
 
 /**
  * Com\Tecnick\Pdf\Encrypt\Type\Seed
@@ -43,15 +44,17 @@ class Seed
      */
     public function encrypt($data = '', $key = '', $mode = 'openssl')
     {
-        $rnd = uniqid(rand().microtime(true), true);
+        $rnd = uniqid(rand() . microtime(true), true);
 
         if (function_exists('posix_getpid')) {
             $rnd .= posix_getpid();
         }
 
-        if (($mode == 'openssl')
+        if (
+            ($mode == 'openssl')
             && function_exists('openssl_random_pseudo_bytes')
-            && (strtoupper(substr(PHP_OS, 0, 3)) !== 'WIN')) {
+            && (strtoupper(substr(PHP_OS, 0, 3)) !== 'WIN')
+        ) {
             // this is not used on windows systems because it is very slow for a know bug
             $rnd .= openssl_random_pseudo_bytes(512);
         } else {
@@ -60,6 +63,6 @@ class Seed
             }
         }
 
-        return $rnd.$data.__DIR__.__FILE__.$key.serialize($_SERVER).microtime(true);
+        return $rnd . $data . __DIR__ . __FILE__ . $key . serialize($_SERVER) . microtime(true);
     }
 }

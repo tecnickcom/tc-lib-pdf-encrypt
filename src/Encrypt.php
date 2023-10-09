@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Encrypt.php
  *
@@ -15,7 +16,7 @@
 
 namespace Com\Tecnick\Pdf\Encrypt;
 
-use \Com\Tecnick\Pdf\Encrypt\Exception as EncException;
+use Com\Tecnick\Pdf\Encrypt\Exception as EncException;
 
 /**
  * Com\Tecnick\Pdf\Encrypt\Encrypt
@@ -132,7 +133,7 @@ class Encrypt extends \Com\Tecnick\Pdf\Encrypt\Compute
         $this->encryptdata['owner_password'] = $owner_pass;
 
         if (($mode < 0) || ($mode > 3)) {
-            throw new EncException('unknown encryption mode: '.$this->encryptdata['mode']);
+            throw new EncException('unknown encryption mode: ' . $this->encryptdata['mode']);
         }
         $this->encryptdata['mode'] = $mode;
 
@@ -172,7 +173,7 @@ class Encrypt extends \Com\Tecnick\Pdf\Encrypt\Compute
         }
 
         if (!isset(self::$encmap[$type])) {
-            throw new EncException('unknown encryption type: '.$type);
+            throw new EncException('unknown encryption type: ' . $type);
         }
 
         if (($key === null) && ($type == $this->encryptdata['mode'])) {
@@ -184,8 +185,8 @@ class Encrypt extends \Com\Tecnick\Pdf\Encrypt\Compute
             }
         }
 
-        $class = '\\Com\\Tecnick\\Pdf\\Encrypt\\Type\\'.self::$encmap[$type];
-        $obj = new $class;
+        $class = '\\Com\\Tecnick\\Pdf\\Encrypt\\Type\\' . self::$encmap[$type];
+        $obj = new $class();
         return $obj->encrypt($data, $key);
     }
 
@@ -199,7 +200,7 @@ class Encrypt extends \Com\Tecnick\Pdf\Encrypt\Compute
      */
     public function getObjectKey($objnum)
     {
-        $objkey = $this->encryptdata['key'].pack('VXxx', $objnum);
+        $objkey = $this->encryptdata['key'] . pack('VXxx', $objnum);
         if ($this->encryptdata['mode'] == 2) {
             // AES-128 padding
             $objkey .= "\x73\x41\x6C\x54"; // sAlT
@@ -220,9 +221,9 @@ class Encrypt extends \Com\Tecnick\Pdf\Encrypt\Compute
     {
         $binprot = sprintf('%032b', $protection);
         return chr(bindec(substr($binprot, 24, 8)))
-            .chr(bindec(substr($binprot, 16, 8)))
-            .chr(bindec(substr($binprot, 8, 8)))
-            .chr(bindec(substr($binprot, 0, 8)));
+            . chr(bindec(substr($binprot, 16, 8)))
+            . chr(bindec(substr($binprot, 8, 8)))
+            . chr(bindec(substr($binprot, 0, 8)));
     }
 
     /**
@@ -269,7 +270,7 @@ class Encrypt extends \Com\Tecnick\Pdf\Encrypt\Compute
             ++$bslength;
         }
         for ($idx = 0; $idx < $bslength; $idx += 2) {
-            $str .= chr(hexdec($bstr[$idx].$bstr[($idx + 1)]));
+            $str .= chr(hexdec($bstr[$idx] . $bstr[($idx + 1)]));
         }
         return $str;
     }
@@ -348,7 +349,7 @@ class Encrypt extends \Com\Tecnick\Pdf\Encrypt\Compute
      */
     public function escapeDataString($str, $objnum = null)
     {
-        return '('.$this->escapeString($this->encryptString($str, $objnum)).')';
+        return '(' . $this->escapeString($this->encryptString($str, $objnum)) . ')';
     }
 
     /**
@@ -364,6 +365,9 @@ class Encrypt extends \Com\Tecnick\Pdf\Encrypt\Compute
         if ($time === null) {
             $time = time(); // get current UTC time
         }
-        return $this->escapeDataString('D:'.substr_replace(date('YmdHisO', intval($time)), '\'', -2, 0).'\'', $objnum);
+        return $this->escapeDataString(
+            'D:' . substr_replace(date('YmdHisO', intval($time)), '\'', -2, 0) . '\'',
+            $objnum
+        );
     }
 }

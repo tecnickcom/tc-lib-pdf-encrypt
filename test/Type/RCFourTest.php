@@ -1,4 +1,5 @@
 <?php
+
 /**
  * RCFourTest.php
  *
@@ -16,7 +17,7 @@
 namespace Test;
 
 use PHPUnit\Framework\TestCase;
-use \Test\TestUtil;
+use Test\TestUtil;
 
 /**
  * RC4 encryption Test
@@ -45,7 +46,7 @@ class RCFourTest extends TestUtil
         $enc_a = $testObj->encrypt($data, $key, '');
         $enc_b = $testObj->encrypt($data, $key, 'RC4-40');
         $this->assertEquals($enc_a, $enc_b);
-        
+
         $eobj = new \Com\Tecnick\Pdf\Encrypt\Type\RCFourFive();
         $enc_c = $eobj->encrypt($data, $key);
         $this->assertEquals($enc_a, $enc_c);
@@ -60,7 +61,7 @@ class RCFourTest extends TestUtil
         $enc_a = $testObj->encrypt($data, $key);
         $enc_b = $testObj->encrypt($data, $key, 'RC4');
         $this->assertEquals($enc_a, $enc_b);
-        
+
         $eobj = new \Com\Tecnick\Pdf\Encrypt\Type\RCFourSixteen();
         $enc_c = $eobj->encrypt($data, $key);
         $this->assertEquals($enc_a, $enc_c);

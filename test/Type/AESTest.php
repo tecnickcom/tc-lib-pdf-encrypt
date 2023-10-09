@@ -1,4 +1,5 @@
 <?php
+
 /**
  * AESTest.php
  *
@@ -16,7 +17,7 @@
 namespace Test;
 
 use PHPUnit\Framework\TestCase;
-use \Test\TestUtil;
+use Test\TestUtil;
 
 /**
  * AES encryption Test
@@ -45,7 +46,7 @@ class AESTest extends TestUtil
         $enc_a = $testObj->encrypt($data, $key);
         $enc_b = $testObj->encrypt($data, $key, 'aes-128-cbc');
         $this->assertEquals(strlen($enc_a), strlen($enc_b));
-        
+
         $eobj = new \Com\Tecnick\Pdf\Encrypt\Type\AESSixteen();
         $enc_c = $eobj->encrypt($data, $key);
         $this->assertEquals(strlen($enc_a), strlen($enc_c));
@@ -60,7 +61,7 @@ class AESTest extends TestUtil
         $enc_a = $testObj->encrypt($data, $key, '');
         $enc_b = $testObj->encrypt($data, $key, 'aes-256-cbc');
         $this->assertEquals(strlen($enc_a), strlen($enc_b));
-        
+
         $eobj = new \Com\Tecnick\Pdf\Encrypt\Type\AESThirtytwo();
         $enc_c = $eobj->encrypt($data, $key);
         $this->assertEquals(strlen($enc_a), strlen($enc_c));

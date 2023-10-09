@@ -1,4 +1,5 @@
 <?php
+
 /**
  * SeedTest.php
  *
@@ -16,7 +17,7 @@
 namespace Test;
 
 use PHPUnit\Framework\TestCase;
-use \Test\TestUtil;
+use Test\TestUtil;
 
 /**
  * Seed Test

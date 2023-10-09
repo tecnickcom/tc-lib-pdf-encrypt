@@ -1,4 +1,5 @@
 <?php
+
 /**
  * AESnopad.php
  *
@@ -15,7 +16,7 @@
 
 namespace Com\Tecnick\Pdf\Encrypt\Type;
 
-use \Com\Tecnick\Pdf\Encrypt\Exception as EncException;
+use Com\Tecnick\Pdf\Encrypt\Exception as EncException;
 
 /**
  * Com\Tecnick\Pdf\Encrypt\Type\AESnopad
@@ -81,6 +82,6 @@ class AESnopad
     protected function pad($data, $length)
     {
         $padding = ($length - (strlen($data) % $length));
-        return substr($data.str_repeat("\x00", $padding), 0, $length);
+        return substr($data . str_repeat("\x00", $padding), 0, $length);
     }
 }

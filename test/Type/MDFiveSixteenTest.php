@@ -1,4 +1,5 @@
 <?php
+
 /**
  * MDFiveSixteenTest.php
  *
@@ -16,7 +17,7 @@
 namespace Test;
 
 use PHPUnit\Framework\TestCase;
-use \Test\TestUtil;
+use Test\TestUtil;
 
 /**
  * MD5-16 encryption Test

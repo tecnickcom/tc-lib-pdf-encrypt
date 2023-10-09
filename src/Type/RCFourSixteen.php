@@ -1,4 +1,5 @@
 <?php
+
 /**
  * RCFourSixteen.php
  *
@@ -15,8 +16,8 @@
 
 namespace Com\Tecnick\Pdf\Encrypt\Type;
 
-use \Com\Tecnick\Pdf\Encrypt\Exception as EncException;
-use \Com\Tecnick\Pdf\Encrypt\Type\RCFour;
+use Com\Tecnick\Pdf\Encrypt\Exception as EncException;
+use Com\Tecnick\Pdf\Encrypt\Type\RCFour;
 
 /**
  * Com\Tecnick\Pdf\Encrypt\Type\RCFourSixteen
