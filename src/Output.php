@@ -32,6 +32,25 @@ namespace Com\Tecnick\Pdf\Encrypt;
 abstract class Output
 {
     /**
+     * Encryption data
+     *
+     * @var array
+     */
+    protected $encryptdata = array('encrypted' => false, 'mode' => false);
+
+    /**
+     * Escape a string: add "\" before "\", "(" and ")".
+     *
+     * @param string $str String to escape.
+     *
+     * @return string
+     */
+    public function escapeString($str)
+    {
+        return strtr($str, array(')' => '\\)', '(' => '\\(', '\\' => '\\\\', chr(13) => '\r'));
+    }
+
+    /**
      * Get the PDF encryption block
      *
      * @param int $pon Current PDF object number

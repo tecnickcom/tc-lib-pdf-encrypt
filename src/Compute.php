@@ -34,6 +34,103 @@ use Com\Tecnick\Pdf\Encrypt\Exception as EncException;
 abstract class Compute extends \Com\Tecnick\Pdf\Encrypt\Data
 {
     /**
+     * Encrypt data using the specified encrypt type.
+     *
+     * @param string $type   Encrypt type.
+     * @param string $data   Data string to encrypt.
+     * @param string $key    Encryption key.
+     * @param int    $objnum Object number.
+     *
+     * @return string Encrypted data string.
+     */
+    public function encrypt($type, $data = '', $key = null, $objnum = null)
+    {
+        if (empty($this->encryptdata['encrypted']) || ($type === false)) {
+            return $data;
+        }
+
+        if (!isset(self::$encmap[$type])) {
+            throw new EncException('unknown encryption type: ' . $type);
+        }
+
+        if (($key === null) && ($type == $this->encryptdata['mode'])) {
+            $key = '';
+            if ($this->encryptdata['mode'] < 3) {
+                $key = $this->getObjectKey($objnum);
+            } elseif ($this->encryptdata['mode'] == 3) {
+                $key = $this->encryptdata['key'];
+            }
+        }
+
+        $class = '\\Com\\Tecnick\\Pdf\\Encrypt\\Type\\' . self::$encmap[$type];
+        $obj = new $class();
+        return $obj->encrypt($data, $key);
+    }
+
+    /**
+     * Compute encryption key depending on object number where the encrypted data is stored.
+     * This is used for all strings and streams without crypt filter specifier.
+     *
+     * @param int $objnum Object number.
+     *
+     * @return int
+     */
+    public function getObjectKey($objnum)
+    {
+        $objkey = $this->encryptdata['key'] . pack('VXxx', $objnum);
+        if ($this->encryptdata['mode'] == 2) {
+            // AES-128 padding
+            $objkey .= "\x73\x41\x6C\x54"; // sAlT
+        }
+        $objkey = substr($this->encrypt('MD5-16', $objkey, 'H*'), 0, (($this->encryptdata['Length'] / 8) + 5));
+        $objkey = substr($objkey, 0, 16);
+        return $objkey;
+    }
+
+    /**
+     * Convert encryption P value to a string of bytes, low-order byte first.
+     *
+     * @param string $protection 32bit encryption permission value (P value).
+     *
+     * @return string
+     */
+    public function getEncPermissionsString($protection)
+    {
+        $binprot = sprintf('%032b', $protection);
+        return chr(bindec(substr($binprot, 24, 8)))
+            . chr(bindec(substr($binprot, 16, 8)))
+            . chr(bindec(substr($binprot, 8, 8)))
+            . chr(bindec(substr($binprot, 0, 8)));
+    }
+
+    /**
+     * Return the permission code used on encryption (P value).
+     *
+     * @param array $permissions The set of permissions (specify the ones you want to block).
+     * @param $mode (int) encryption strength: 0 = RC4 40 bit; 1 = RC4 128 bit; 2 = AES 128 bit; 3 = AES 256 bit.
+     *
+     * @return int
+     */
+    public function getUserPermissionCode($permissions, $mode = 0)
+    {
+        $protection = 2147422012; // 32 bit: (01111111 11111111 00001111 00111100)
+        foreach ($permissions as $permission) {
+            if (isset(self::$permbits[$permission])) {
+                if (($mode > 0) || (self::$permbits[$permission] <= 32)) {
+                    // set only valid permissions
+                    if (self::$permbits[$permission] == 2) {
+                        // the logic for bit 2 is inverted (cleared by default)
+                        $protection += self::$permbits[$permission];
+                    } else {
+                        $protection -= self::$permbits[$permission];
+                    }
+                }
+            }
+        }
+        return $protection;
+    }
+
+    /**
      * Compute UE value
      *
      * @return string UE value
