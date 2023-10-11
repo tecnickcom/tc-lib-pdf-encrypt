@@ -36,7 +36,7 @@ abstract class Compute extends \Com\Tecnick\Pdf\Encrypt\Data
     /**
      * Encrypt data using the specified encrypt type.
      *
-     * @param string $type   Encrypt type.
+     * @param int|string $type   Encrypt type.
      * @param string $data   Data string to encrypt.
      * @param string $key    Encryption key.
      * @param int    $objnum Object number.
@@ -73,7 +73,7 @@ abstract class Compute extends \Com\Tecnick\Pdf\Encrypt\Data
      *
      * @param int $objnum Object number.
      *
-     * @return int
+     * @return string
      */
     public function getObjectKey($objnum)
     {

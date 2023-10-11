@@ -67,7 +67,7 @@ class Encrypt extends \Com\Tecnick\Pdf\Encrypt\Compute
      *
      * @param string $user_pass   User password. Empty by default.
      * @param string $owner_pass  Owner password. If not specified, a random value is used.
-     * @param string $pubkeys     Array of recipients containing public-key certificates ('c') and permissions ('p').
+     * @param array  $pubkeys     Array of recipients containing public-key certificates ('c') and permissions ('p').
      *                            For example:
      *                            array(array('c' => 'file://../examples/data/cert/test.crt', 'p' => array('print')))
      *                            To create self-signed certificate:

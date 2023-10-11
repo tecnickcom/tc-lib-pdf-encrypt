@@ -75,7 +75,6 @@ class AESnopad
      *
      * @param string $data   Data to pad
      * @param int    $length Padding length
-     * @param string $ivect Initialization vector
      *
      * @return string
      */
