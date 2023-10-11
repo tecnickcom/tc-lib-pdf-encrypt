@@ -260,7 +260,7 @@ tag:
 test:
 	cp phpunit.xml.dist phpunit.xml
 	./vendor/bin/phpunit --migrate-configuration || true
-	OPENSSL_CONF=${OPENSSL_CONF} ./vendor/bin/phpunit test
+	OPENSSL_CONF=${OPENSSL_CONF} ./vendor/bin/phpunit --stderr test
 
 # Remove all installed files
 .PHONY: uninstall
