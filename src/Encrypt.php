@@ -3,13 +3,13 @@
 /**
  * Encrypt.php
  *
- * @since       2008-01-02
- * @category    Library
- * @package     PdfEncrypt
- * @author      Nicola Asuni <info@tecnick.com>
- * @copyright   2011-2023 Nicola Asuni - Tecnick.com LTD
- * @license     http://www.gnu.org/copyleft/lesser.html GNU-LGPL v3 (see LICENSE.TXT)
- * @link        https://github.com/tecnickcom/tc-lib-pdf-encrypt
+ * @since     2008-01-02
+ * @category  Library
+ * @package   PdfEncrypt
+ * @author    Nicola Asuni <info@tecnick.com>
+ * @copyright 2011-2023 Nicola Asuni - Tecnick.com LTD
+ * @license   http://www.gnu.org/copyleft/lesser.html GNU-LGPL v3 (see LICENSE.TXT)
+ * @link      https://github.com/tecnickcom/tc-lib-pdf-encrypt
  *
  * This file is part of tc-lib-pdf-encrypt software library.
  */
@@ -23,13 +23,13 @@ use Com\Tecnick\Pdf\Encrypt\Exception as EncException;
  *
  * PHP class for encrypting data for PDF documents
  *
- * @since       2008-01-02
- * @category    Library
- * @package     PdfEncrypt
- * @author      Nicola Asuni <info@tecnick.com>
- * @copyright   2011-2023 Nicola Asuni - Tecnick.com LTD
- * @license     http://www.gnu.org/copyleft/lesser.html GNU-LGPL v3 (see LICENSE.TXT)
- * @link        https://github.com/tecnickcom/tc-lib-pdf-encrypt
+ * @since     2008-01-02
+ * @category  Library
+ * @package   PdfEncrypt
+ * @author    Nicola Asuni <info@tecnick.com>
+ * @copyright 2011-2023 Nicola Asuni - Tecnick.com LTD
+ * @license   http://www.gnu.org/copyleft/lesser.html GNU-LGPL v3 (see LICENSE.TXT)
+ * @link      https://github.com/tecnickcom/tc-lib-pdf-encrypt
  */
 class Encrypt extends \Com\Tecnick\Pdf\Encrypt\Compute
 {
@@ -45,41 +45,42 @@ class Encrypt extends \Com\Tecnick\Pdf\Encrypt\Compute
      * @param bool   $enabled     False if the encryption is disabled (i.e. the document is in PDF/A mode)
      * @param string $file_id     File ID
      * @param int    $mode        Encryption strength: 0 = RC4 40; 1 = RC4 128; 2 = AES 128; 3 = AES 256
-     * @param array  $permissions The set of permissions (specify the ones you want to block):
-     *                      'owner' // When set permits change of encryption and enables all other permissions.
-     *                              // (inverted logic: cleared by default).
-     *                      'print' // Print the document.
-     *                     'modify' // Modify the contents of the document by operations other than those controlled
-     *                              // by 'fill-forms', 'extract' and 'assemble'.
-     *                       'copy' // Copy or otherwise extract text and graphics from the document.
+     * @param array<string>  $permissions The set of permissions (specify the ones you want to block):
+     *                'owner' // When set permits change of encryption and enables all other permissions.
+     *                // (inverted logic: cleared by default).
+     *                'print' // Print the document.
+     *                'modify' // Modify the contents of the document by operations other than those controlled
+     *                // by 'fill-forms', 'extract' and 'assemble'.
+     *                'copy' // Copy or otherwise extract text and graphics from the document.
      *                'annot-forms' // Add or modify text annotations, fill in interactive form fields, and,
-     *                              // if 'modify' is also set, create or modify interactive form fields
-     *                              // (including signature fields).
-     *                 'fill-forms' // Fill in existing interactive form fields (including signature fields),
-     *                              // even if 'annot-forms' is not specified.
-     *                    'extract' // Extract text and graphics (in support of accessibility to users with
-     *                              // disabilities or for other purposes).
-     *                   'assemble' // Assemble the document (insert, rotate, or delete pages and create bookmarks
-     *                              // or thumbnail images), even if 'modify' is not set.
-     *                 'print-high' // Print the document to a representation from which a faithful digital copy of the
-     *                              // PDF content could be generated. When this is not set, printing is limited to a
-     *                              // low-level representation of the appearance, possibly of degraded quality.
+     *                // if 'modify' is also set, create or modify interactive form fields
+     *                // (including signature fields).
+     *                'fill-forms' // Fill in existing interactive form fields (including signature fields),
+     *                // even if 'annot-forms' is not specified.
+     *                'extract' // Extract text and graphics (in support of accessibility to users with
+     *                // disabilities or for other purposes).
+     *                'assemble' // Assemble the document (insert, rotate, or delete pages and create bookmarks
+     *                // or thumbnail images), even if 'modify' is not set.
+     *                'print-high' // Print the document to a representation from which a faithful digital copy of the
+     *                // PDF content could be generated. When this is not set, printing is limited to a
+     *                // low-level representation of the appearance, possibly of degraded quality.
      *
      * @param string $user_pass   User password. Empty by default.
      * @param string $owner_pass  Owner password. If not specified, a random value is used.
-     * @param array  $pubkeys     Array of recipients containing public-key certificates ('c') and permissions ('p').
-     *                            For example:
-     *                            array(array('c' => 'file://../examples/data/cert/test.crt', 'p' => array('print')))
-     *                            To create self-signed certificate:
-     *                            openssl req -x509 -nodes -days 365000 -newkey rsa:1024 -keyout cert.pem -out cert.pem
-     *                            To export crt to p12: openssl pkcs12 -export -in cert.pem -out cert.p12
-     *                            To convert pfx certificate to pem: openssl pkcs12 -in cert.pfx -out cert.pem -nodes
+     * @param ?array{array{'c':string, 'p':array<string>}}  $pubkeys
+     *               Array of recipients containing public-key certificates ('c') and permissions ('p').
+     *               For example:
+     *               array(array('c' => 'file://../examples/data/cert/test.crt', 'p' => array('print')))
+     *               To create self-signed certificate:
+     *               openssl req -x509 -nodes -days 365000 -newkey rsa:1024 -keyout cert.pem -out cert.pem
+     *               To export crt to p12: openssl pkcs12 -export -in cert.pem -out cert.p12
+     *               To convert pfx certificate to pem: openssl pkcs12 -in cert.pfx -out cert.pem -nodes
      */
     public function __construct(
-        $enabled = false,
-        $file_id = '',
-        $mode = 0,
-        $permissions = array(
+        bool $enabled = false,
+        string $file_id = '',
+        int $mode = 0,
+        array $permissions = [
             'print',
             'modify',
             'copy',
@@ -87,53 +88,59 @@ class Encrypt extends \Com\Tecnick\Pdf\Encrypt\Compute
             'fill-forms',
             'extract',
             'assemble',
-            'print-high'
-        ),
-        $user_pass = '',
-        $owner_pass = null,
-        $pubkeys = null
+            'print-high',
+        ],
+        string $user_pass = '',
+        string $owner_pass = '',
+        array $pubkeys = null
     ) {
-        if (!$enabled) {
+        if (! $enabled) {
             return;
         }
+
         $this->encryptdata['protection'] = $this->getUserPermissionCode($permissions, $mode);
 
-        if (is_array($pubkeys)) {
+        if ($pubkeys !== null && $pubkeys !== []) {
             // public-key mode
             $this->encryptdata['pubkeys'] = $pubkeys;
             if ($mode == 0) {
                 // public-Key Security requires at least 128 bit
                 $mode = 1;
             }
+
             // Set Public-Key filter (available are: Entrust.PPKEF, Adobe.PPKLite, Adobe.PubSec)
             $this->encryptdata['pubkey'] = true;
             $this->encryptdata['Filter'] = 'Adobe.PubSec';
-            $this->encryptdata['StmF']   = 'DefaultCryptFilter';
-            $this->encryptdata['StrF']   = 'DefaultCryptFilter';
+            $this->encryptdata['StmF'] = 'DefaultCryptFilter';
+            $this->encryptdata['StrF'] = 'DefaultCryptFilter';
         } else {
             // standard mode (password mode)
             $this->encryptdata['pubkey'] = false;
             $this->encryptdata['Filter'] = 'Standard';
-            $this->encryptdata['StmF']   = 'StdCF';
-            $this->encryptdata['StrF']   = 'StdCF';
+            $this->encryptdata['StmF'] = 'StdCF';
+            $this->encryptdata['StrF'] = 'StdCF';
         }
 
-        if ($owner_pass === null) {
+        if ($owner_pass == '') {
             $owner_pass = md5($this->encrypt('seed'));
         }
 
-        $this->encryptdata['user_password']  = $user_pass;
+        $this->encryptdata['user_password'] = $user_pass;
         $this->encryptdata['owner_password'] = $owner_pass;
 
         if (($mode < 0) || ($mode > 3)) {
             throw new EncException('unknown encryption mode: ' . $this->encryptdata['mode']);
         }
+
         $this->encryptdata['mode'] = $mode;
 
-        $this->encryptdata = array_merge($this->encryptdata, self::$encrypt_settings[$mode]);
-        if (!$this->encryptdata['pubkey']) {
+        /** @phpstan-ignore-next-line */
+        $this->encryptdata = array_merge($this->encryptdata, self::ENCRYPT_SETTINGS[$mode]);
+
+        if (! $this->encryptdata['pubkey']) {
             unset($this->encryptdata['SubFilter'], $this->encryptdata['Recipients']);
         }
+
         $this->encryptdata['encrypted'] = true;
         $this->encryptdata['fileid'] = $this->convertHexStringToString($file_id);
         $this->generateEncryptionKey();
@@ -142,9 +149,45 @@ class Encrypt extends \Com\Tecnick\Pdf\Encrypt\Compute
     /**
      * Get the encryption data array.
      *
-     * @return array
+     * @return array{
+     *     'CF': array{
+     *         'AuthEvent': string,
+     *         'CFM': string,
+     *         'EncryptMetadata': bool,
+     *         'Length': int,
+     *     },
+     *     'EFF': string,
+     *     'EncryptMetadata': bool,
+     *     'Filter': string,
+     *     'Length': int,
+     *     'O': string,
+     *     'OE': string,
+     *     'OKS': string,
+     *     'OVS': string,
+     *     'P': int,
+     *     'Recipients': array<string>,
+     *     'StmF': string,
+     *     'StrF': string,
+     *     'SubFilter': string,
+     *     'U': string,
+     *     'UE': string,
+     *     'UKS': string,
+     *     'UVS': string,
+     *     'V': int,
+     *     'encrypted': bool,
+     *     'fileid': string,
+     *     'key': string,
+     *     'mode': int,
+     *     'objid': int,
+     *     'owner_password': string,
+     *     'perms': string,
+     *     'protection': int,
+     *     'pubkey': bool,
+     *     'pubkeys'?: array{array{'c':string, 'p':array<string>}},
+     *     'user_password': string,
+     *     }
      */
-    public function getEncryptionData()
+    public function getEncryptionData(): array
     {
         return $this->encryptdata;
     }
@@ -153,21 +196,21 @@ class Encrypt extends \Com\Tecnick\Pdf\Encrypt\Compute
      * Convert hexadecimal string to string.
      *
      * @param string $bstr Byte-string to convert.
-     *
-     * @return String
      */
-    public function convertHexStringToString($bstr)
+    public function convertHexStringToString(string $bstr): string
     {
         $str = ''; // string to be returned
         $bslength = strlen($bstr);
-        if (($bslength % 2) != 0) {
+        if ($bslength % 2 != 0) {
             // padding
             $bstr .= '0';
             ++$bslength;
         }
+
         for ($idx = 0; $idx < $bslength; $idx += 2) {
-            $str .= chr(hexdec($bstr[$idx] . $bstr[($idx + 1)]));
+            $str .= chr((int) hexdec($bstr[$idx] . $bstr[($idx + 1)]));
         }
+
         return $str;
     }
 
@@ -175,16 +218,19 @@ class Encrypt extends \Com\Tecnick\Pdf\Encrypt\Compute
      * Convert string to hexadecimal string (byte string).
      *
      * @param string $str String to convert.
-     *
-     * @return string
      */
-    public function convertStringToHexString($str)
+    public function convertStringToHexString(string $str): string
     {
-        $bstr = '';
         $chars = preg_split('//', $str, -1, PREG_SPLIT_NO_EMPTY);
-        foreach ($chars as $chr) {
-            $bstr .= sprintf('%02s', dechex(ord($chr)));
+        if ($chars === false) {
+            return '';
         }
+
+        $bstr = '';
+        foreach ($chars as $char) {
+            $bstr .= sprintf('%02s', dechex(ord($char)));
+        }
+
         return $bstr;
     }
 
@@ -192,10 +238,8 @@ class Encrypt extends \Com\Tecnick\Pdf\Encrypt\Compute
      * Encode a name object.
      *
      * @param string $name Name object to encode.
-     *
-     * @return string Encoded name object.
      */
-    public function encodeNameObject($name)
+    public function encodeNameObject(string $name): string
     {
         $escname = '';
         $length = strlen($name);
@@ -207,6 +251,7 @@ class Encrypt extends \Com\Tecnick\Pdf\Encrypt\Compute
                 $escname .= sprintf('#%02X', ord($chr));
             }
         }
+
         return $escname;
     }
 
@@ -215,12 +260,10 @@ class Encrypt extends \Com\Tecnick\Pdf\Encrypt\Compute
      *
      * @param string $str    String to encrypt.
      * @param int    $objnum Object ID.
-     *
-     * @return string
      */
-    public function encryptString($str, $objnum = null)
+    public function encryptString(string $str, int $objnum = 0): string
     {
-        return $this->encrypt($this->encryptdata['mode'], $str, null, $objnum);
+        return $this->encrypt($this->encryptdata['mode'], $str, '', $objnum);
     }
 
     /**
@@ -228,10 +271,8 @@ class Encrypt extends \Com\Tecnick\Pdf\Encrypt\Compute
      *
      * @param string $str    Data string to escape.
      * @param int    $objnum Object ID.
-     *
-     * @return string
      */
-    public function escapeDataString($str, $objnum = null)
+    public function escapeDataString(string $str, int $objnum = 0): string
     {
         return '(' . $this->escapeString($this->encryptString($str, $objnum)) . ')';
     }
@@ -244,13 +285,14 @@ class Encrypt extends \Com\Tecnick\Pdf\Encrypt\Compute
      *
      * @return string escaped date string.
      */
-    public function getFormattedDate($time = null, $objnum = null)
+    public function getFormattedDate($time = null, int $objnum = 0): string
     {
         if ($time === null) {
             $time = time(); // get current UTC time
         }
+
         return $this->escapeDataString(
-            'D:' . substr_replace(date('YmdHisO', intval($time)), '\'', -2, 0) . '\'',
+            'D:' . substr_replace(date('YmdHisO', (int) $time), "'", -2, 0) . "'",
             $objnum
         );
     }
