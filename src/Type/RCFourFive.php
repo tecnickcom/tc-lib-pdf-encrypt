@@ -37,9 +37,13 @@ class RCFourFive
      *
      * @param string $data Data string to encrypt
      * @param string $key  Encryption key
+     *
+     * @return string encrypted text
      */
-    public function encrypt(string $data, string $key): string
-    {
+    public function encrypt(
+        string $data,
+        string $key,
+    ): string {
         $rcFour = new RCFour();
         return $rcFour->encrypt($data, $key, 'RC4-40');
     }

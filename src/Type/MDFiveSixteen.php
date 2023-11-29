@@ -36,9 +36,13 @@ class MDFiveSixteen
      *
      * @param string $data Data string to encrypt
      * @param string $key  Encryption key
+     *
+     * @return string encrypted text
      */
-    public function encrypt(string $data, string $key = 'H*'): string
-    {
+    public function encrypt(
+        string $data,
+        string $key = 'H*',
+    ): string {
         $key = 'H*';
         return pack($key, md5($data));
     }

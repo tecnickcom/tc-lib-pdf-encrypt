@@ -37,9 +37,14 @@ class Seed
      * @param string $data Random seed data
      * @param string $key  Random seed data
      * @param string $mode Default mode (openssl or raw)
+     *
+     * @return string seed
      */
-    public function encrypt(string $data = '', string $key = '', string $mode = 'openssl'): string
-    {
+    public function encrypt(
+        string $data = '',
+        string $key = '',
+        string $mode = 'openssl',
+    ): string {
         $rnd = uniqid(random_int(0, mt_getrandmax()) . microtime(true), true);
 
         if (function_exists('posix_getpid')) {

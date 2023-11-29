@@ -31,53 +31,81 @@ namespace Com\Tecnick\Pdf\Encrypt;
  */
 abstract class Data extends \Com\Tecnick\Pdf\Encrypt\Output
 {
-    //@codingStandardsIgnoreStart
     /**
      * Encryption padding string.
+     *
+     * @var string
      */
-    protected const ENCPAD = "\x28\xBF\x4E\x5E\x4E\x75\x8A\x41\x64\x00\x4E\x56\xFF\xFA\x01\x08\x2E\x2E\x00\xB6\xD0\x68\x3E\x80\x2F\x0C\xA9\xFE\x64\x53\x69\x7A";
-
-    //@codingStandardsIgnoreEnd
+    protected const ENCPAD = "\x28\xBF\x4E\x5E\x4E\x75\x8A\x41\x64\x00"
+        . "\x4E\x56\xFF\xFA\x01\x08\x2E\x2E\x00\xB6"
+        . "\xD0\x68\x3E\x80\x2F\x0C\xA9\xFE\x64\x53"
+        . "\x69\x7A";
 
     /**
      * Map permission modes and bits.
+     *
+     * @var array<string, int>
      */
     protected const PERMBITS = [
-        'owner' => 2,
         // bit 2 -- inverted logic: cleared by default
         // When set permits change of encryption and enables all other permissions.
-        'print' => 4,
+        'owner' => 2,
+
         // bit 3
         // Print the document.
-        'modify' => 8,
+        'print' => 4,
+
         // bit 4
         // Modify the contents of the document by operations other than those controlled
         // by 'fill-forms', 'extract' and 'assemble'.
-        'copy' => 16,
+        'modify' => 8,
+
         // bit 5
         // Copy or otherwise extract text and graphics from the document.
-        'annot-forms' => 32,
+        'copy' => 16,
+
         // bit 6
         // Add or modify text annotations, fill in interactive form fields, and,
         // if 'modify' is also set, create or modify interactive form fields
         // (including signature fields).
-        'fill-forms' => 256,
+        'annot-forms' => 32,
+
         // bit 9
         // Fill in existing interactive form fields (including signature fields),
         // even if 'annot-forms' is not specified.
-        'extract' => 512,
+        'fill-forms' => 256,
+
         // bit 10
         // Extract text and graphics (in support of accessibility to users with
         // disabilities or for other purposes).
-        'assemble' => 1024,
+        'extract' => 512,
+
         // bit 11
         // Assemble the document (insert, rotate, or delete pages and create bookmarks
         // or thumbnail images), even if 'modify' is not set.
+        'assemble' => 1024,
+
+        // bit 12
+        // Print the document to a representation from which a faithful digital copy of the
+        // PDF content could be generated. When this is not set, printing is limited to a
+        // low-level representation of the appearance, possibly of degraded quality.
         'print-high' => 2048,
     ];
 
     /**
      * Encryption settings.
+     *
+     * @var array<int, array{
+     *          'V': int,
+     *          'Length': int,
+     *          'CF': array{
+     *              'CFM': string,
+     *              'Length'?: int,
+     *              'AuthEvent': string,
+     *          },
+     *       'SubFilter': string,
+     *       'Recipients': array<string, string>,
+     *      }>
      */
     protected const ENCRYPT_SETTINGS = [
         0 => [
@@ -88,6 +116,8 @@ abstract class Data extends \Com\Tecnick\Pdf\Encrypt\Output
                 'CFM' => 'V2',
                 'AuthEvent' => 'DocOpen',
             ],
+            'SubFilter' => '',
+            'Recipients' => [],
         ],
         1 => [
             // RC4 128 bit
@@ -128,32 +158,22 @@ abstract class Data extends \Com\Tecnick\Pdf\Encrypt\Output
 
     /**
      * Define a list of available encrypt encoders.
+     *
+     * @var array<int|string, string>
      */
     protected const ENCMAP = [
-        0 => 'RCFourFive',
-        // RC4-40
-        1 => 'RCFourSixteen',
-        // RC4-128
-        2 => 'AESSixteen',
-        // AES-128
-        3 => 'AESThirtytwo',
-        // AES-256
-        'RC4' => 'RCFour',
-        // RC4-40
-        'RC4-40' => 'RCFourFive',
-        // RC4-40
-        'RC4-128' => 'RCFourSixteen',
-        // RC4-128
-        'AES' => 'AES',
-        // AES-256
-        'AES-128' => 'AESSixteen',
-        // AES-128
-        'AES-256' => 'AESThirtytwo',
-        // AES-256
-        'AESnopad' => 'AESnopad',
-        // AES - no padding
-        'MD5-16' => 'MDFiveSixteen',
-        // MD5-16
-        'seed' => 'Seed',
+        0 => 'RCFourFive',            // RC4-40
+        1 => 'RCFourSixteen',         // RC4-128
+        2 => 'AESSixteen',            // AES-128
+        3 => 'AESThirtytwo',          // AES-256
+        'RC4' => 'RCFour',            // RC4-40
+        'RC4-40' => 'RCFourFive',     // RC4-40
+        'RC4-128' => 'RCFourSixteen', // RC4-128
+        'AES' => 'AES',               // AES-256
+        'AES-128' => 'AESSixteen',    // AES-128
+        'AES-256' => 'AESThirtytwo',  // AES-256
+        'AESnopad' => 'AESnopad',     // AES - no padding
+        'MD5-16' => 'MDFiveSixteen',  // MD5-16
+        'seed' => 'Seed',             // Random seed string
     ];
 }

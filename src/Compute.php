@@ -43,8 +43,12 @@ abstract class Compute extends \Com\Tecnick\Pdf\Encrypt\Data
      * @param string     $key    Encryption key.
      * @param int        $objnum Object number.
      */
-    public function encrypt(int|string|false $type, string $data = '', string $key = '', int $objnum = 0): string
-    {
+    public function encrypt(
+        int|string|false $type,
+        string $data = '',
+        string $key = '',
+        int $objnum = 0,
+    ): string {
         if (empty($this->encryptdata['encrypted']) || ($type === false)) {
             return $data;
         }
@@ -104,8 +108,10 @@ abstract class Compute extends \Com\Tecnick\Pdf\Encrypt\Data
      * @param array<string> $permissions The set of permissions (specify the ones you want to block).
      * @param int   $mode        Encryption strength: 0 = RC4 40 bit; 1 = RC4 128 bit; 2 = AES 128 bit; 3 = AES 256 bit.
      */
-    public function getUserPermissionCode(array $permissions, int $mode = 0): int
-    {
+    public function getUserPermissionCode(
+        array $permissions,
+        int $mode = 0,
+    ): int {
         $protection = 2_147_422_012; // 32 bit: (01111111 11111111 00001111 00111100)
         foreach ($permissions as $permission) {
             if (! isset(self::PERMBITS[$permission])) {

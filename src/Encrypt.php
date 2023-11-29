@@ -30,6 +30,8 @@ use Com\Tecnick\Pdf\Encrypt\Exception as EncException;
  * @copyright 2011-2023 Nicola Asuni - Tecnick.com LTD
  * @license   http://www.gnu.org/copyleft/lesser.html GNU-LGPL v3 (see LICENSE.TXT)
  * @link      https://github.com/tecnickcom/tc-lib-pdf-encrypt
+ *
+ * @phpstan-import-type TEncryptData from Output
  */
 class Encrypt extends \Com\Tecnick\Pdf\Encrypt\Compute
 {
@@ -149,43 +151,7 @@ class Encrypt extends \Com\Tecnick\Pdf\Encrypt\Compute
     /**
      * Get the encryption data array.
      *
-     * @return array{
-     *     'CF': array{
-     *         'AuthEvent': string,
-     *         'CFM': string,
-     *         'EncryptMetadata': bool,
-     *         'Length': int,
-     *     },
-     *     'EFF': string,
-     *     'EncryptMetadata': bool,
-     *     'Filter': string,
-     *     'Length': int,
-     *     'O': string,
-     *     'OE': string,
-     *     'OKS': string,
-     *     'OVS': string,
-     *     'P': int,
-     *     'Recipients': array<string>,
-     *     'StmF': string,
-     *     'StrF': string,
-     *     'SubFilter': string,
-     *     'U': string,
-     *     'UE': string,
-     *     'UKS': string,
-     *     'UVS': string,
-     *     'V': int,
-     *     'encrypted': bool,
-     *     'fileid': string,
-     *     'key': string,
-     *     'mode': int,
-     *     'objid': int,
-     *     'owner_password': string,
-     *     'perms': string,
-     *     'protection': int,
-     *     'pubkey': bool,
-     *     'pubkeys'?: array{array{'c':string, 'p':array<string>}},
-     *     'user_password': string,
-     *     }
+     * @return TEncryptData
      */
     public function getEncryptionData(): array
     {
@@ -261,8 +227,10 @@ class Encrypt extends \Com\Tecnick\Pdf\Encrypt\Compute
      * @param string $str    String to encrypt.
      * @param int    $objnum Object ID.
      */
-    public function encryptString(string $str, int $objnum = 0): string
-    {
+    public function encryptString(
+        string $str,
+        int $objnum = 0,
+    ): string {
         return $this->encrypt($this->encryptdata['mode'], $str, '', $objnum);
     }
 
@@ -272,8 +240,10 @@ class Encrypt extends \Com\Tecnick\Pdf\Encrypt\Compute
      * @param string $str    Data string to escape.
      * @param int    $objnum Object ID.
      */
-    public function escapeDataString(string $str, int $objnum = 0): string
-    {
+    public function escapeDataString(
+        string $str,
+        int $objnum = 0,
+    ): string {
         return '(' . $this->escapeString($this->encryptString($str, $objnum)) . ')';
     }
 
@@ -285,14 +255,16 @@ class Encrypt extends \Com\Tecnick\Pdf\Encrypt\Compute
      *
      * @return string escaped date string.
      */
-    public function getFormattedDate($time = null, int $objnum = 0): string
-    {
+    public function getFormattedDate(
+        int $time = null,
+        int $objnum = 0,
+    ): string {
         if ($time === null) {
             $time = time(); // get current UTC time
         }
 
         return $this->escapeDataString(
-            'D:' . substr_replace(date('YmdHisO', (int) $time), "'", -2, 0) . "'",
+            'D:' . substr_replace(date('YmdHisO', $time), "'", -2, 0) . "'",
             $objnum
         );
     }

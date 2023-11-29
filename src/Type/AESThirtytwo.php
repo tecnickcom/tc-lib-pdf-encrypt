@@ -37,9 +37,13 @@ class AESThirtytwo
      *
      * @param string $data Data string to encrypt
      * @param string $key  Encryption key
+     *
+     * @return string encrypted text
      */
-    public function encrypt(string $data, string $key): string
-    {
+    public function encrypt(
+        string $data,
+        string $key,
+    ): string {
         $aes = new AES();
         return $aes->encrypt($data, $key, 'aes-256-cbc');
     }

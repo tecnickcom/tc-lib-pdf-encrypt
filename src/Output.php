@@ -28,49 +28,51 @@ namespace Com\Tecnick\Pdf\Encrypt;
  * @copyright 2011-2023 Nicola Asuni - Tecnick.com LTD
  * @license   http://www.gnu.org/copyleft/lesser.html GNU-LGPL v3 (see LICENSE.TXT)
  * @link      https://github.com/tecnickcom/tc-lib-pdf-encrypt
+ *
+ * @phpstan-type TEncryptData array{
+ *     'CF': array{
+ *         'AuthEvent': string,
+ *         'CFM': string,
+ *         'EncryptMetadata': bool,
+ *         'Length': int,
+ *     },
+ *     'EFF': string,
+ *     'EncryptMetadata': bool,
+ *     'Filter': string,
+ *     'Length': int,
+ *     'O': string,
+ *     'OE': string,
+ *     'OKS': string,
+ *     'OVS': string,
+ *     'P': int,
+ *     'Recipients': array<string>,
+ *     'StmF': string,
+ *     'StrF': string,
+ *     'SubFilter': string,
+ *     'U': string,
+ *     'UE': string,
+ *     'UKS': string,
+ *     'UVS': string,
+ *     'V': int,
+ *     'encrypted': bool,
+ *     'fileid': string,
+ *     'key': string,
+ *     'mode': int,
+ *     'objid': int,
+ *     'owner_password': string,
+ *     'perms': string,
+ *     'protection': int,
+ *     'pubkey': bool,
+ *     'pubkeys'?: array{array{'c':string, 'p':array<string>}},
+ *     'user_password': string,
+ *     }
  */
 abstract class Output
 {
     /**
      * Encryption data
      *
-     * @var array{
-     *     'CF': array{
-     *         'AuthEvent': string,
-     *         'CFM': string,
-     *         'EncryptMetadata': bool,
-     *         'Length': int,
-     *     },
-     *     'EFF': string,
-     *     'EncryptMetadata': bool,
-     *     'Filter': string,
-     *     'Length': int,
-     *     'O': string,
-     *     'OE': string,
-     *     'OKS': string,
-     *     'OVS': string,
-     *     'P': int,
-     *     'Recipients': array<string>,
-     *     'StmF': string,
-     *     'StrF': string,
-     *     'SubFilter': string,
-     *     'U': string,
-     *     'UE': string,
-     *     'UKS': string,
-     *     'UVS': string,
-     *     'V': int,
-     *     'encrypted': bool,
-     *     'fileid': string,
-     *     'key': string,
-     *     'mode': int,
-     *     'objid': int,
-     *     'owner_password': string,
-     *     'perms': string,
-     *     'protection': int,
-     *     'pubkey': bool,
-     *     'pubkeys'?: array{array{'c':string, 'p':array<string>}},
-     *     'user_password': string,
-     *     }
+     * @var TEncryptData
      */
     protected $encryptdata = [
         'CF' => [
@@ -184,7 +186,8 @@ abstract class Output
             }
 
             $out .= ' ]' . "\n"
-                . '/EncryptMetadata ' . $this->getBooleanString($this->encryptdata['CF']['EncryptMetadata']) . "\n";
+                . '/EncryptMetadata '
+                . $this->getBooleanString($this->encryptdata['CF']['EncryptMetadata']) . "\n";
         }
 
         // The event to be used to trigger the authorization
@@ -232,7 +235,8 @@ abstract class Output
             $out .= '/O (' . $this->escapeString($this->encryptdata['O']) . ')' . "\n"
                 . '/U (' . $this->escapeString($this->encryptdata['U']) . ')' . "\n"
                 . '/P ' . $this->encryptdata['P'] . "\n"
-                . '/EncryptMetadata ' . $this->getBooleanString($this->encryptdata['EncryptMetadata']) . "\n";
+                . '/EncryptMetadata '
+                . $this->getBooleanString($this->encryptdata['EncryptMetadata']) . "\n";
         }
 
         return $out;
