@@ -39,14 +39,20 @@ class AES
      * @param string $data Data string to encrypt
      * @param string $key  Encryption key
      * @param string $mode Cipher
+     *
+     * @return string encrypted text
      */
-    public function encrypt(string $data, string $key, string $mode = ''): string
-    {
+    public function encrypt(
+        string $data,
+        string $key,
+        string $mode = '',
+    ): string {
         if ($mode === '') {
             $mode = strlen($key) > 16 ? 'aes-256-cbc' : 'aes-128-cbc';
-        } elseif (! in_array($mode, ['aes-128-cbc', 'aes-256-cbc'])) {
-            throw new EncException('unknown chipher: ' . $mode);
         }
+
+        $aesnopad = new AESnopad();
+        $aesnopad->checkCipher($mode);
 
         $len = openssl_cipher_iv_length($mode);
         if ($len === false) {
@@ -54,7 +60,6 @@ class AES
         }
 
         $ivect = openssl_random_pseudo_bytes($len);
-        $aeSnopad = new AESnopad();
-        return $ivect . $aeSnopad->encrypt($data, $key, $ivect, $mode);
+        return $ivect . $aesnopad->encrypt($data, $key, $ivect, $mode);
     }
 }

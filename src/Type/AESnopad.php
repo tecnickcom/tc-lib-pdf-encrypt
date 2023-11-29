@@ -36,13 +36,27 @@ class AESnopad
     /**
      * Block size (IV length):
      * openssl_cipher_iv_length('aes-256-cbc')
+     *
+     * @var int
      */
     public const BLOCKSIZE = 16;
 
     /**
      * Initialization Vector (16 bytes)
+     *
+     * @var string
      */
     public const IVECT = "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00";
+
+    /**
+     * List of valid openssl cyphers for AES encryption.
+     *
+     * @var array<string>
+     */
+    public const VALID_CIPHERS = [
+        'aes-128-cbc',
+        'aes-256-cbc',
+    ];
 
     /**
      * Encrypt the data
@@ -60,6 +74,8 @@ class AESnopad
         string $ivect = self::IVECT,
         string $mode = 'aes-256-cbc'
     ): string {
+        $this->checkCipher($mode);
+
         $enc = openssl_encrypt(
             $this->pad($data, self::BLOCKSIZE),
             $mode,
@@ -81,10 +97,30 @@ class AESnopad
      *
      * @param string $data   Data to pad
      * @param int    $length Padding length
+     *
+     * @return string Padded string
      */
     protected function pad(string $data, int $length): string
     {
         $padding = ($length - (strlen($data) % $length));
         return substr($data . str_repeat("\x00", $padding), 0, $length);
+    }
+
+    /**
+     * Check if the cipher is valid and available.
+     *
+     * @param string $cipher openSSL cipher name.
+     *
+     * @throws EncException in case of error.
+     */
+    public function checkCipher(string $cipher): void
+    {
+        if (! in_array($cipher, self::VALID_CIPHERS)) {
+            throw new EncException('invalid chipher: ' . $cipher);
+        }
+
+        if (! in_array($cipher, openssl_get_cipher_methods())) {
+            throw new EncException('unavailable chipher: ' . $cipher);
+        }
     }
 }
