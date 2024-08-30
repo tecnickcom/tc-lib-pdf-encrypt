@@ -136,7 +136,7 @@ abstract class Data extends \Com\Tecnick\Pdf\Encrypt\Output
             'Length' => 128,
             'CF' => [
                 'CFM' => 'AESV2',
-                'Length' => 128,
+                'Length' => 16,
                 'AuthEvent' => 'DocOpen',
             ],
             'SubFilter' => 'adbe.pkcs7.s5',
@@ -148,7 +148,7 @@ abstract class Data extends \Com\Tecnick\Pdf\Encrypt\Output
             'Length' => 256,
             'CF' => [
                 'CFM' => 'AESV3',
-                'Length' => 256,
+                'Length' => 32,
                 'AuthEvent' => 'DocOpen',
             ],
             'SubFilter' => 'adbe.pkcs7.s5',
