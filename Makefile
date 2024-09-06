@@ -266,7 +266,7 @@ tag:
 test:
 	cp phpunit.xml.dist phpunit.xml
 	./vendor/bin/phpunit --migrate-configuration || true
-	OPENSSL_CONF=${OPENSSL_CONF} ./vendor/bin/phpunit --stderr test
+	OPENSSL_CONF=${OPENSSL_CONF} XDEBUG_MODE=coverage ./vendor/bin/phpunit --stderr test
 
 # Remove all installed files
 .PHONY: uninstall
