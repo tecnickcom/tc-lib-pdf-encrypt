@@ -140,6 +140,7 @@ class Encrypt extends \Com\Tecnick\Pdf\Encrypt\Compute
         $this->encryptdata = array_merge($this->encryptdata, self::ENCRYPT_SETTINGS[$mode]);
 
         if (! $this->encryptdata['pubkey']) {
+            /** @phpstan-ignore-next-line */
             unset($this->encryptdata['SubFilter'], $this->encryptdata['Recipients']);
         }
 

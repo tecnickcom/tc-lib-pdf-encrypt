@@ -31,7 +31,7 @@ use Com\Tecnick\Pdf\Encrypt\Exception as EncException;
  * @license   http://www.gnu.org/copyleft/lesser.html GNU-LGPL v3 (see LICENSE.TXT)
  * @link      https://github.com/tecnickcom/tc-lib-pdf-encrypt
  *
- * @SuppressWarnings(PHPMD.ExcessiveClassComplexity)
+ * @SuppressWarnings("PHPMD.ExcessiveClassComplexity")
  */
 abstract class Compute extends \Com\Tecnick\Pdf\Encrypt\Data
 {
@@ -302,9 +302,9 @@ abstract class Compute extends \Com\Tecnick\Pdf\Encrypt\Data
     /**
      * Compute public encryption key
      *
-     * @SuppressWarnings(PHPMD.CyclomaticComplexity)
-     * @SuppressWarnings(PHPMD.NPathComplexity)
-     * @SuppressWarnings(PHPMD.ExcessiveMethodLength)
+     * @SuppressWarnings("PHPMD.CyclomaticComplexity")
+     * @SuppressWarnings("PHPMD.NPathComplexity")
+     * @SuppressWarnings("PHPMD.ExcessiveMethodLength")
      */
     protected function generatePublicEncryptionKey(): void
     {
@@ -404,6 +404,9 @@ abstract class Compute extends \Com\Tecnick\Pdf\Encrypt\Data
 
             // convert signature to hex
             $hexsignature = current($sigarr);
+            if (($hexsignature === false) || (!is_string($hexsignature))) {
+                throw new EncException('Unable to convert signature: ' . $tempencfile);
+            }
 
             // store signature on recipients array
             $this->encryptdata['Recipients'][] = $hexsignature;
