@@ -94,7 +94,7 @@ class Encrypt extends \Com\Tecnick\Pdf\Encrypt\Compute
         ],
         string $user_pass = '',
         string $owner_pass = '',
-        array $pubkeys = null
+        array|null $pubkeys = null
     ) {
         if (! $enabled) {
             return;
@@ -257,7 +257,7 @@ class Encrypt extends \Com\Tecnick\Pdf\Encrypt\Compute
      * @return string escaped date string.
      */
     public function getFormattedDate(
-        int $time = null,
+        int|null $time = null,
         int $objnum = 0,
     ): string {
         if ($time === null) {
