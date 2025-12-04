@@ -44,7 +44,7 @@ abstract class Compute extends \Com\Tecnick\Pdf\Encrypt\Data
      * @param int        $objnum Object number.
      */
     public function encrypt(
-        int|string|false $type,
+        int | string | false $type,
         string $data = '',
         string $key = '',
         int $objnum = 0,
@@ -78,14 +78,14 @@ abstract class Compute extends \Com\Tecnick\Pdf\Encrypt\Data
      */
     public function getObjectKey(int $objnum): string
     {
-        $objkey = $this->encryptdata['key'] . pack('VXxx', $objnum);
+        $objkey = $this->encryptdata['key'] . \pack('VXxx', $objnum);
         if ($this->encryptdata['mode'] == 2) {
             // AES-128 padding
             $objkey .= "\x73\x41\x6C\x54"; // sAlT
         }
 
-        $objkey = substr($this->encrypt('MD5-16', $objkey, 'H*'), 0, (($this->encryptdata['Length'] / 8) + 5));
-        return substr($objkey, 0, 16);
+        $objkey = \substr($this->encrypt('MD5-16', $objkey, 'H*'), 0, (($this->encryptdata['Length'] / 8) + 5));
+        return \substr($objkey, 0, 16);
     }
 
     /**
@@ -95,11 +95,11 @@ abstract class Compute extends \Com\Tecnick\Pdf\Encrypt\Data
      */
     public function getEncPermissionsString(int $protection): string
     {
-        $binprot = sprintf('%032b', $protection);
-        return chr((int) bindec(substr($binprot, 24, 8)))
-            . chr((int) bindec(substr($binprot, 16, 8)))
-            . chr((int) bindec(substr($binprot, 8, 8)))
-            . chr((int) bindec(substr($binprot, 0, 8)));
+        $binprot = \sprintf('%032b', $protection);
+        return \chr((int) \bindec(\substr($binprot, 24, 8)))
+            . \chr((int) \bindec(\substr($binprot, 16, 8)))
+            . \chr((int) \bindec(\substr($binprot, 8, 8)))
+            . \chr((int) \bindec(\substr($binprot, 0, 8)));
     }
 
     /**
@@ -139,7 +139,7 @@ abstract class Compute extends \Com\Tecnick\Pdf\Encrypt\Data
      */
     protected function getUEValue(): string
     {
-        $hashkey = hash('sha256', $this->encryptdata['user_password'] . $this->encryptdata['UKS'], true);
+        $hashkey = \hash('sha256', $this->encryptdata['user_password'] . $this->encryptdata['UKS'], true);
         return $this->encrypt('AESnopad', $this->encryptdata['key'], $hashkey);
     }
 
@@ -148,7 +148,7 @@ abstract class Compute extends \Com\Tecnick\Pdf\Encrypt\Data
      */
     protected function getOEValue(): string
     {
-        $hashkey = hash(
+        $hashkey = \hash(
             'sha256',
             $this->encryptdata['owner_password'] . $this->encryptdata['OKS'] . $this->encryptdata['U'],
             true
@@ -168,27 +168,27 @@ abstract class Compute extends \Com\Tecnick\Pdf\Encrypt\Data
         if ($this->encryptdata['mode'] < 3) { // RC4-128, AES-128
             $tmp = $this->encrypt('MD5-16', self::ENCPAD . $this->encryptdata['fileid'], 'H*');
             $enc = $this->encrypt('RC4', $tmp, $this->encryptdata['key']);
-            $len = strlen($tmp);
+            $len = \strlen($tmp);
             for ($idx = 1; $idx <= 19; ++$idx) {
                 $ekey = '';
                 for ($jdx = 0; $jdx < $len; ++$jdx) {
-                    $ekey .= chr(ord($this->encryptdata['key'][$jdx]) ^ $idx);
+                    $ekey .= \chr(\ord($this->encryptdata['key'][$jdx]) ^ $idx);
                 }
 
                 $enc = $this->encrypt('RC4', $enc, $ekey);
             }
 
-            $enc .= str_repeat("\x00", 16);
-            return substr($enc, 0, 32);
+            $enc .= \str_repeat("\x00", 16);
+            return \substr($enc, 0, 32);
         }
 
         // AES-256 ($this->encryptdata['mode'] = 3)
         $seed = $this->encrypt('MD5-16', $this->encrypt('seed'), 'H*');
         // User Validation Salt
-        $this->encryptdata['UVS'] = substr($seed, 0, 8);
+        $this->encryptdata['UVS'] = \substr($seed, 0, 8);
         // User Key Salt
-        $this->encryptdata['UKS'] = substr($seed, 8, 16);
-        return hash('sha256', $this->encryptdata['user_password'] . $this->encryptdata['UVS'], true)
+        $this->encryptdata['UKS'] = \substr($seed, 8, 16);
+        return \hash('sha256', $this->encryptdata['user_password'] . $this->encryptdata['UVS'], true)
             . $this->encryptdata['UVS'] . $this->encryptdata['UKS'];
     }
 
@@ -205,14 +205,14 @@ abstract class Compute extends \Com\Tecnick\Pdf\Encrypt\Data
                 }
             }
 
-            $owner_key = substr($tmp, 0, ($this->encryptdata['Length'] / 8));
+            $owner_key = \substr($tmp, 0, ($this->encryptdata['Length'] / 8));
             $enc = $this->encrypt('RC4', $this->encryptdata['user_password'], $owner_key);
             if ($this->encryptdata['mode'] > 0) {
-                $len = strlen($owner_key);
+                $len = \strlen($owner_key);
                 for ($idx = 1; $idx <= 19; ++$idx) {
                     $ekey = '';
                     for ($jdx = 0; $jdx < $len; ++$jdx) {
-                        $ekey .= chr(ord($owner_key[$jdx]) ^ $idx);
+                        $ekey .= \chr(\ord($owner_key[$jdx]) ^ $idx);
                     }
 
                     $enc = $this->encrypt('RC4', $enc, $ekey);
@@ -225,10 +225,10 @@ abstract class Compute extends \Com\Tecnick\Pdf\Encrypt\Data
         // AES-256 ($this->encryptdata['mode'] = 3)
         $seed = $this->encrypt('MD5-16', $this->encrypt('seed'), 'H*');
         // Owner Validation Salt
-        $this->encryptdata['OVS'] = substr($seed, 0, 8);
+        $this->encryptdata['OVS'] = \substr($seed, 0, 8);
         // Owner Key Salt
-        $this->encryptdata['OKS'] = substr($seed, 8, 16);
-        return hash(
+        $this->encryptdata['OKS'] = \substr($seed, 8, 16);
+        return \hash(
             'sha256',
             $this->encryptdata['owner_password'] . $this->encryptdata['OVS'] . $this->encryptdata['U'],
             true
@@ -255,10 +255,10 @@ abstract class Compute extends \Com\Tecnick\Pdf\Encrypt\Data
         $keybytelen = ($this->encryptdata['Length'] / 8);
         if ($this->encryptdata['mode'] == 3) { // AES-256
             // generate 256 bit random key
-            $this->encryptdata['key'] = substr(hash('sha256', $this->encrypt('seed'), true), 0, $keybytelen);
+            $this->encryptdata['key'] = \substr(\hash('sha256', $this->encrypt('seed'), true), 0, $keybytelen);
             // truncate passwords
-            $this->encryptdata['user_password'] = substr($this->encryptdata['user_password'], 0, 127);
-            $this->encryptdata['owner_password'] = substr($this->encryptdata['owner_password'], 0, 127);
+            $this->encryptdata['user_password'] = \substr($this->encryptdata['user_password'], 0, 127);
+            $this->encryptdata['owner_password'] = \substr($this->encryptdata['owner_password'], 0, 127);
             $this->encryptdata['U'] = $this->getUValue();
             $this->encryptdata['UE'] = $this->getUEValue();
             $this->encryptdata['O'] = $this->getOValue();
@@ -266,15 +266,15 @@ abstract class Compute extends \Com\Tecnick\Pdf\Encrypt\Data
             $this->encryptdata['P'] = $this->encryptdata['protection'];
             // Computing the encryption dictionary's Perms (permissions) value
             $perms = $this->getEncPermissionsString($this->encryptdata['protection']); // bytes 0-3
-            $perms .= chr(255) . chr(255) . chr(255) . chr(255); // bytes 4-7
+            $perms .= \chr(255) . \chr(255) . \chr(255) . \chr(255); // bytes 4-7
             $perms .= 'T'; // $this->encryptdata['CF']['EncryptMetadata'] is never set, so we always encrypt
             $perms .= 'adb'; // bytes 9-11
             $perms .= 'nick'; // bytes 12-15
             $this->encryptdata['perms'] = $this->encrypt('AESnopad', $perms, $this->encryptdata['key']);
         } else { // RC4-40, RC4-128, AES-128
             // Pad passwords
-            $this->encryptdata['user_password'] = substr($this->encryptdata['user_password'] . self::ENCPAD, 0, 32);
-            $this->encryptdata['owner_password'] = substr($this->encryptdata['owner_password'] . self::ENCPAD, 0, 32);
+            $this->encryptdata['user_password'] = \substr($this->encryptdata['user_password'] . self::ENCPAD, 0, 32);
+            $this->encryptdata['owner_password'] = \substr($this->encryptdata['owner_password'] . self::ENCPAD, 0, 32);
             $this->encryptdata['O'] = $this->getOValue();
             // get default permissions (reverse byte order)
             $permissions = $this->getEncPermissionsString($this->encryptdata['protection']);
@@ -289,11 +289,11 @@ abstract class Compute extends \Com\Tecnick\Pdf\Encrypt\Data
             );
             if ($this->encryptdata['mode'] > 0) {
                 for ($idx = 0; $idx < 50; ++$idx) {
-                    $tmp = $this->encrypt('MD5-16', substr($tmp, 0, $keybytelen), 'H*');
+                    $tmp = $this->encrypt('MD5-16', \substr($tmp, 0, $keybytelen), 'H*');
                 }
             }
 
-            $this->encryptdata['key'] = substr($tmp, 0, $keybytelen);
+            $this->encryptdata['key'] = \substr($tmp, 0, $keybytelen);
             $this->encryptdata['U'] = $this->getUValue();
             $this->encryptdata['P'] = $this->encryptdata['protection'];
         }
@@ -310,7 +310,7 @@ abstract class Compute extends \Com\Tecnick\Pdf\Encrypt\Data
     {
         $keybytelen = ($this->encryptdata['Length'] / 8);
         // random 20-byte seed
-        $seed = sha1($this->encrypt('seed'), true);
+        $seed = \sha1($this->encrypt('seed'), true);
         $recipient_bytes = '';
         $pubkeys = $this->encryptdata['pubkeys'] ?? throw new EncException('Missing pubkeys');
         foreach ($pubkeys as $pubkey) {
@@ -327,40 +327,40 @@ abstract class Compute extends \Com\Tecnick\Pdf\Encrypt\Data
             $envelope = $seed . $pkpermissions;
 
             // write the envelope data to a temporary file
-            $tempkeyfile = tempnam(
-                sys_get_temp_dir(),
-                '__tcpdf_key_' . md5($this->encryptdata['fileid'] . $envelope) . '_'
+            $tempkeyfile = \tempnam(
+                \sys_get_temp_dir(),
+                '__tcpdf_key_' . \md5($this->encryptdata['fileid'] . $envelope) . '_'
             );
             if ($tempkeyfile === false) {
                 throw new EncException('Unable to generate temporary key file name');
             }
 
-            if (file_put_contents($tempkeyfile, $envelope) === false) {
+            if (\file_put_contents($tempkeyfile, $envelope) === false) {
                 throw new EncException('Unable to create temporary key file: ' . $tempkeyfile);
             }
 
-            $tempencfile = tempnam(
-                sys_get_temp_dir(),
-                '__tcpdf_enc_' . md5($this->encryptdata['fileid'] . $envelope) . '_'
+            $tempencfile = \tempnam(
+                \sys_get_temp_dir(),
+                '__tcpdf_enc_' . \md5($this->encryptdata['fileid'] . $envelope) . '_'
             );
             if ($tempencfile === false) {
                 throw new EncException('Unable to generate temporary key file name');
             }
 
-            if (! function_exists('openssl_pkcs7_encrypt')) {
+            if (! \function_exists('openssl_pkcs7_encrypt')) {
                 throw new EncException(
                     'Unable to encrypt the file: ' . $tempkeyfile . "\n"
                     . 'Public-Key Security requires openssl_pkcs7_encrypt.'
                 );
             }
 
-            $pkey = file_get_contents($pubkey['c']);
+            $pkey = \file_get_contents($pubkey['c']);
             if ($pkey === false) {
                 throw new EncException('Unable to read public key file: ' . $pubkey['c']);
             }
 
             if (
-                ! openssl_pkcs7_encrypt(
+                ! \openssl_pkcs7_encrypt(
                     $tempkeyfile,
                     $tempencfile,
                     $pkey,
@@ -370,41 +370,41 @@ abstract class Compute extends \Com\Tecnick\Pdf\Encrypt\Data
             ) {
                 throw new EncException(
                     'Unable to encrypt the file: ' . $tempkeyfile . "\n"
-                    . 'OpenSSL error: ' . openssl_error_string()
+                    . 'OpenSSL error: ' . \openssl_error_string()
                 );
             }
 
             // read encryption signature
-            $signature = file_get_contents($tempencfile);
+            $signature = \file_get_contents($tempencfile);
             if ($signature === false) {
                 throw new EncException('Unable to read signature file: ' . $tempencfile);
             }
 
-            $sigcontentpos = strpos($signature, 'Content-Disposition');
+            $sigcontentpos = \strpos($signature, 'Content-Disposition');
             if ($sigcontentpos === false) {
                 throw new EncException('Unable to find signature content');
             }
 
             // extract signature
-            $signature = substr($signature, $sigcontentpos);
+            $signature = \substr($signature, $sigcontentpos);
 
-            $tmparr = explode("\n\n", $signature);
-            $signature = trim($tmparr[1]);
+            $tmparr = \explode("\n\n", $signature);
+            $signature = \trim($tmparr[1]);
             unset($tmparr);
             // decode signature
-            $signature = base64_decode($signature);
+            $signature = \base64_decode($signature);
             if ($signature === false) {
                 throw new EncException('Unable to decode signature: ' . $tempencfile);
             }
 
-            $sigarr = unpack('H*', $signature);
+            $sigarr = \unpack('H*', $signature);
             if ($sigarr === false) {
                 throw new EncException('Unable to unpack signature: ' . $tempencfile);
             }
 
             // convert signature to hex
-            $hexsignature = current($sigarr);
-            if (($hexsignature === false) || (!is_string($hexsignature))) {
+            $hexsignature = \current($sigarr);
+            if (($hexsignature === false) || (!\is_string($hexsignature))) {
                 throw new EncException('Unable to convert signature: ' . $tempencfile);
             }
 
@@ -418,9 +418,9 @@ abstract class Compute extends \Com\Tecnick\Pdf\Encrypt\Data
 
         // calculate encryption key
         if ($this->encryptdata['mode'] == 3) { // AES-256
-            $this->encryptdata['key'] = substr(hash('sha256', $seed . $recipient_bytes, true), 0, $keybytelen);
+            $this->encryptdata['key'] = \substr(\hash('sha256', $seed . $recipient_bytes, true), 0, $keybytelen);
         } else { // RC4-40, RC4-128, AES-128
-            $this->encryptdata['key'] = substr(sha1($seed . $recipient_bytes, true), 0, $keybytelen);
+            $this->encryptdata['key'] = \substr(\sha1($seed . $recipient_bytes, true), 0, $keybytelen);
         }
     }
 }

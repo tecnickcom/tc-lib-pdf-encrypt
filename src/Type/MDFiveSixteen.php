@@ -44,6 +44,6 @@ class MDFiveSixteen
         string $key = 'H*',
     ): string {
         $key = 'H*';
-        return pack($key, md5($data));
+        return \pack($key, \md5($data));
     }
 }

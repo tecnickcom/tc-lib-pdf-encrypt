@@ -42,11 +42,11 @@ class AESTest extends TestUtil
 
         $enc_a = $aes->encrypt($data, $key);
         $enc_b = $aes->encrypt($data, $key, 'aes-128-cbc');
-        $this->assertEquals(strlen($enc_a), strlen($enc_b));
+        $this->assertEquals(\strlen($enc_a), \strlen($enc_b));
 
         $aesSixteen = new \Com\Tecnick\Pdf\Encrypt\Type\AESSixteen();
         $enc_c = $aesSixteen->encrypt($data, $key);
-        $this->assertEquals(strlen($enc_a), strlen($enc_c));
+        $this->assertEquals(\strlen($enc_a), \strlen($enc_c));
     }
 
     public function testEncrypt256(): void
@@ -57,11 +57,11 @@ class AESTest extends TestUtil
 
         $enc_a = $aes->encrypt($data, $key, '');
         $enc_b = $aes->encrypt($data, $key, 'aes-256-cbc');
-        $this->assertEquals(strlen($enc_a), strlen($enc_b));
+        $this->assertEquals(\strlen($enc_a), \strlen($enc_b));
 
         $aesThirtytwo = new \Com\Tecnick\Pdf\Encrypt\Type\AESThirtytwo();
         $enc_c = $aesThirtytwo->encrypt($data, $key);
-        $this->assertEquals(strlen($enc_a), strlen($enc_c));
+        $this->assertEquals(\strlen($enc_a), \strlen($enc_c));
     }
 
     public function testEncryptException(): void

@@ -38,6 +38,6 @@ class MDFiveSixteenTest extends TestUtil
     {
         $mdFiveSixteen = $this->getTestObject();
         $result = $mdFiveSixteen->encrypt('hello');
-        $this->assertEquals('5d41402abc4b2a76b9719d911017c592', bin2hex($result));
+        $this->assertEquals('5d41402abc4b2a76b9719d911017c592', \bin2hex($result));
     }
 }

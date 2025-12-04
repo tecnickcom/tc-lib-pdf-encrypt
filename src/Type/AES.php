@@ -48,18 +48,18 @@ class AES
         string $mode = '',
     ): string {
         if ($mode === '') {
-            $mode = strlen($key) > 16 ? 'aes-256-cbc' : 'aes-128-cbc';
+            $mode = \strlen($key) > 16 ? 'aes-256-cbc' : 'aes-128-cbc';
         }
 
         $aesnopad = new AESnopad();
         $aesnopad->checkCipher($mode);
 
-        $len = openssl_cipher_iv_length($mode);
+        $len = \openssl_cipher_iv_length($mode);
         if ($len === false) {
             throw new EncException('openssl_cipher_iv_length failed');
         }
 
-        $ivect = openssl_random_pseudo_bytes($len);
+        $ivect = \openssl_random_pseudo_bytes($len);
         return $ivect . $aesnopad->encrypt($data, $key, $ivect, $mode);
     }
 }

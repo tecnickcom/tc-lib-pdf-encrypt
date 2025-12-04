@@ -124,7 +124,7 @@ class Encrypt extends \Com\Tecnick\Pdf\Encrypt\Compute
         }
 
         if ($owner_pass == '') {
-            $owner_pass = md5($this->encrypt('seed'));
+            $owner_pass = \md5($this->encrypt('seed'));
         }
 
         $this->encryptdata['user_password'] = $user_pass;
@@ -137,7 +137,7 @@ class Encrypt extends \Com\Tecnick\Pdf\Encrypt\Compute
         $this->encryptdata['mode'] = $mode;
 
         /** @phpstan-ignore-next-line */
-        $this->encryptdata = array_merge($this->encryptdata, self::ENCRYPT_SETTINGS[$mode]);
+        $this->encryptdata = \array_merge($this->encryptdata, self::ENCRYPT_SETTINGS[$mode]);
 
         if (! $this->encryptdata['pubkey']) {
             /** @phpstan-ignore-next-line */
@@ -167,7 +167,7 @@ class Encrypt extends \Com\Tecnick\Pdf\Encrypt\Compute
     public function convertHexStringToString(string $bstr): string
     {
         $str = ''; // string to be returned
-        $bslength = strlen($bstr);
+        $bslength = \strlen($bstr);
         if ($bslength % 2 != 0) {
             // padding
             $bstr .= '0';
@@ -175,7 +175,7 @@ class Encrypt extends \Com\Tecnick\Pdf\Encrypt\Compute
         }
 
         for ($idx = 0; $idx < $bslength; $idx += 2) {
-            $str .= chr((int) hexdec($bstr[$idx] . $bstr[($idx + 1)]));
+            $str .= \chr((int) \hexdec($bstr[$idx] . $bstr[($idx + 1)]));
         }
 
         return $str;
@@ -188,14 +188,14 @@ class Encrypt extends \Com\Tecnick\Pdf\Encrypt\Compute
      */
     public function convertStringToHexString(string $str): string
     {
-        $chars = preg_split('//', $str, -1, PREG_SPLIT_NO_EMPTY);
+        $chars = \preg_split('//', $str, -1, PREG_SPLIT_NO_EMPTY);
         if ($chars === false) {
             return '';
         }
 
         $bstr = '';
         foreach ($chars as $char) {
-            $bstr .= sprintf('%02s', dechex(ord($char)));
+            $bstr .= \sprintf('%02s', \dechex(\ord($char)));
         }
 
         return $bstr;
@@ -209,13 +209,13 @@ class Encrypt extends \Com\Tecnick\Pdf\Encrypt\Compute
     public function encodeNameObject(string $name): string
     {
         $escname = '';
-        $length = strlen($name);
+        $length = \strlen($name);
         for ($idx = 0; $idx < $length; ++$idx) {
             $chr = $name[$idx];
-            if (preg_match('/[0-9a-zA-Z#_=-]/', $chr) == 1) {
+            if (\preg_match('/[0-9a-zA-Z#_=-]/', $chr) == 1) {
                 $escname .= $chr;
             } else {
-                $escname .= sprintf('#%02X', ord($chr));
+                $escname .= \sprintf('#%02X', \ord($chr));
             }
         }
 
@@ -261,11 +261,11 @@ class Encrypt extends \Com\Tecnick\Pdf\Encrypt\Compute
         int $objnum = 0,
     ): string {
         if ($time === null) {
-            $time = time(); // get current UTC time
+            $time = \time(); // get current UTC time
         }
 
         return $this->escapeDataString(
-            'D:' . substr_replace(date('YmdHisO', $time), "'", -2, 0) . "'",
+            'D:' . \substr_replace(\date('YmdHisO', $time), "'", -2, 0) . "'",
             $objnum
         );
     }

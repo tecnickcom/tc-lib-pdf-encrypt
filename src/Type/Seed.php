@@ -45,25 +45,25 @@ class Seed
         string $key = '',
         string $mode = 'openssl',
     ): string {
-        $rnd = uniqid(random_int(0, mt_getrandmax()) . microtime(true), true);
+        $rnd = \uniqid(\random_int(0, \mt_getrandmax()) . microtime(true), true);
 
-        if (function_exists('posix_getpid')) {
-            $rnd .= posix_getpid();
+        if (\function_exists('posix_getpid')) {
+            $rnd .= \posix_getpid();
         }
 
         if (
             ($mode == 'openssl')
-            && function_exists('openssl_random_pseudo_bytes')
-            && (strtoupper(substr(PHP_OS, 0, 3)) !== 'WIN')
+            && \function_exists('openssl_random_pseudo_bytes')
+            && (\strtoupper(\substr(PHP_OS, 0, 3)) !== 'WIN')
         ) {
             // this is not used on windows systems because it is very slow for a know bug
-            $rnd .= openssl_random_pseudo_bytes(512);
+            $rnd .= \openssl_random_pseudo_bytes(512);
         } else {
             for ($idx = 0; $idx < 23; ++$idx) {
-                $rnd .= uniqid('', true);
+                $rnd .= \uniqid('', true);
             }
         }
 
-        return $rnd . $data . __DIR__ . __FILE__ . $key . serialize($_SERVER) . microtime(true);
+        return $rnd . $data . __DIR__ . __FILE__ . $key . \serialize($_SERVER) . microtime(true);
     }
 }

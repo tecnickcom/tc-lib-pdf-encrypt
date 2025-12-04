@@ -60,16 +60,16 @@ class RCFour
         string $mode = '',
     ): string {
         if ($mode === '') {
-            $mode = strlen($key) > 5 ? 'RC4' : 'RC4-40';
-        } elseif (! in_array($mode, self::VALID_CIPHERS)) {
+            $mode = \strlen($key) > 5 ? 'RC4' : 'RC4-40';
+        } elseif (! \in_array($mode, self::VALID_CIPHERS)) {
             throw new EncException('invalid chipher: ' . $mode);
         }
 
-        if (! in_array($mode, openssl_get_cipher_methods())) {
+        if (! \in_array($mode, \openssl_get_cipher_methods())) {
             return $this->rc4($data, $key);
         }
 
-        $enc = openssl_encrypt($data, $mode, $key, OPENSSL_RAW_DATA | OPENSSL_ZERO_PADDING);
+        $enc = \openssl_encrypt($data, $mode, $key, OPENSSL_RAW_DATA | OPENSSL_ZERO_PADDING);
         if ($enc === false) {
             throw new EncException('openssl_encrypt failed');
         }
@@ -90,17 +90,17 @@ class RCFour
         string $data,
         string $key,
     ): string {
-        $pkey = str_repeat($key, (int) ((256 / strlen($key)) + 1));
-        $rc4 = range(0, 255);
+        $pkey = \str_repeat($key, (int) ((256 / \strlen($key)) + 1));
+        $rc4 = \range(0, 255);
         $pos = 0;
         for ($idx = 0; $idx < 256; ++$idx) {
             $val = $rc4[$idx];
-            $pos = ($pos + $val + ord($pkey[$idx])) % 256;
+            $pos = ($pos + $val + \ord($pkey[$idx])) % 256;
             $rc4[$idx] = $rc4[$pos];
             $rc4[$pos] = $val;
         }
 
-        $len = strlen($data);
+        $len = \strlen($data);
         $posa = 0;
         $posb = 0;
         $out = '';
@@ -111,7 +111,7 @@ class RCFour
             $rc4[$posa] = $rc4[$posb];
             $rc4[$posb] = $val;
             $pkey = $rc4[($rc4[$posa] + $rc4[$posb]) % 256];
-            $out .= chr(ord($data[$idx]) ^ $pkey);
+            $out .= \chr(\ord($data[$idx]) ^ $pkey);
         }
 
         return $out;

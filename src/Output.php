@@ -119,11 +119,11 @@ abstract class Output
      */
     public function escapeString(string $str): string
     {
-        return strtr($str, [
+        return \strtr($str, [
             ')' => '\\)',
             '(' => '\\(',
             '\\' => '\\\\',
-            chr(13) => '\r',
+            \chr(13) => '\r',
         ]);
     }
 
