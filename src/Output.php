@@ -6,9 +6,9 @@
  * @since     2008-01-02
  * @category  Library
  * @package   PdfEncrypt
- * @author    Nicola Asuni <info@tecnick.com>
- * @copyright 2011-2024 Nicola Asuni - Tecnick.com LTD
- * @license   http://www.gnu.org/copyleft/lesser.html GNU-LGPL v3 (see LICENSE.TXT)
+ * @author   2026 Nicola Asuni <info@tecnick.com>
+ * @copyright 2011-2026 Nicola Asuni - Tecnick.com LTD
+ * @license   https://www.gnu.org/copyleft/lesser.html GNU-LGPL v3 (see LICENSE.TXT)
  * @link      https://github.com/tecnickcom/tc-lib-pdf-encrypt
  *
  * This file is part of tc-lib-pdf-encrypt software library.
@@ -24,9 +24,9 @@ namespace Com\Tecnick\Pdf\Encrypt;
  * @since     2008-01-02
  * @category  Library
  * @package   PdfEncrypt
- * @author    Nicola Asuni <info@tecnick.com>
- * @copyright 2011-2024 Nicola Asuni - Tecnick.com LTD
- * @license   http://www.gnu.org/copyleft/lesser.html GNU-LGPL v3 (see LICENSE.TXT)
+ * @author   2026 Nicola Asuni <info@tecnick.com>
+ * @copyright 2011-2026 Nicola Asuni - Tecnick.com LTD
+ * @license   https://www.gnu.org/copyleft/lesser.html GNU-LGPL v3 (see LICENSE.TXT)
  * @link      https://github.com/tecnickcom/tc-lib-pdf-encrypt
  *
  * @phpstan-type TEncryptData array{
@@ -155,7 +155,7 @@ abstract class Output
             $out .= '/StrF /' . $this->encryptdata['StrF'] . "\n";
             /*
             if (!empty($this->encryptdata['EFF'])) {
-                // The name of the crypt filter that shall be used when encrypting embedded file streams
+                // The name of the crypt filter that shall be used when encrypting embeded file streams
                 // that do not have their own crypt filter specifier.
                 $out .= ' /EFF /'.$this->encryptdata['EFF'];
             }
