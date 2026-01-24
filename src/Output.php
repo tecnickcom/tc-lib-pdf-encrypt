@@ -155,7 +155,7 @@ abstract class Output
             $out .= '/StrF /' . $this->encryptdata['StrF'] . "\n";
             /*
             if (!empty($this->encryptdata['EFF'])) {
-                // The name of the crypt filter that shall be used when encrypting embeded file streams
+                // The name of the crypt filter that shall be used when encrypting embedded file streams
                 // that do not have their own crypt filter specifier.
                 $out .= ' /EFF /'.$this->encryptdata['EFF'];
             }
