@@ -258,7 +258,7 @@ abstract class Output
             $this->encryptdata['EncryptMetadata'] = true;
         }
 
-        if (empty($this->encryptdata['CF'])) {
+        if (empty($this->encryptdata['CF']) || ! \is_array($this->encryptdata['CF'])) {
             return;
         }
 
@@ -266,6 +266,7 @@ abstract class Output
             return;
         }
 
+        /** @phpstan-ignore-next-line */
         $this->encryptdata['CF']['EncryptMetadata'] = true;
     }
 }
