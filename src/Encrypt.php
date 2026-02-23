@@ -175,7 +175,7 @@ class Encrypt extends \Com\Tecnick\Pdf\Encrypt\Compute
         }
 
         for ($idx = 0; $idx < $bslength; $idx += 2) {
-            $str .= \chr((int) \hexdec($bstr[$idx] . $bstr[($idx + 1)]));
+            $str .= \chr((int) \hexdec($bstr[$idx] . $bstr[($idx + 1)]) & 0xFF);
         }
 
         return $str;

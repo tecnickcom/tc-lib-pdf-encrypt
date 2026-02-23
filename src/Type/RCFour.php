@@ -111,7 +111,7 @@ class RCFour
             $rc4[$posa] = $rc4[$posb];
             $rc4[$posb] = $val;
             $pkey = $rc4[($rc4[$posa] + $rc4[$posb]) % 256];
-            $out .= \chr(\ord($data[$idx]) ^ $pkey);
+            $out .= \chr((\ord($data[$idx]) ^ $pkey) & 0xFF);
         }
 
         return $out;

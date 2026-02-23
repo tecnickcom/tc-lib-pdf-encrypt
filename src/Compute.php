@@ -96,10 +96,10 @@ abstract class Compute extends \Com\Tecnick\Pdf\Encrypt\Data
     public function getEncPermissionsString(int $protection): string
     {
         $binprot = \sprintf('%032b', $protection);
-        return \chr((int) \bindec(\substr($binprot, 24, 8)))
-            . \chr((int) \bindec(\substr($binprot, 16, 8)))
-            . \chr((int) \bindec(\substr($binprot, 8, 8)))
-            . \chr((int) \bindec(\substr($binprot, 0, 8)));
+        return \chr((int) \bindec(\substr($binprot, 24, 8)) & 0xFF)
+            . \chr((int) \bindec(\substr($binprot, 16, 8)) & 0xFF)
+            . \chr((int) \bindec(\substr($binprot, 8, 8)) & 0xFF)
+            . \chr((int) \bindec(\substr($binprot, 0, 8)) & 0xFF);
     }
 
     /**
@@ -172,7 +172,7 @@ abstract class Compute extends \Com\Tecnick\Pdf\Encrypt\Data
             for ($idx = 1; $idx <= 19; ++$idx) {
                 $ekey = '';
                 for ($jdx = 0; $jdx < $len; ++$jdx) {
-                    $ekey .= \chr(\ord($this->encryptdata['key'][$jdx]) ^ $idx);
+                    $ekey .= \chr((\ord($this->encryptdata['key'][$jdx]) ^ $idx) & 0xFF);
                 }
 
                 $enc = $this->encrypt('RC4', $enc, $ekey);
@@ -212,7 +212,7 @@ abstract class Compute extends \Com\Tecnick\Pdf\Encrypt\Data
                 for ($idx = 1; $idx <= 19; ++$idx) {
                     $ekey = '';
                     for ($jdx = 0; $jdx < $len; ++$jdx) {
-                        $ekey .= \chr(\ord($owner_key[$jdx]) ^ $idx);
+                        $ekey .= \chr((\ord($owner_key[$jdx]) ^ $idx) & 0xFF);
                     }
 
                     $enc = $this->encrypt('RC4', $enc, $ekey);
