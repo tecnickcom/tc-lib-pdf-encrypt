@@ -173,6 +173,13 @@ class EncryptTest extends TestUtil
         $this->assertEquals(2_147_421_954, $result);
     }
 
+    public function testGetUserPermissionCodeIgnoreInvalidPermission(): void
+    {
+        $encrypt = new \Com\Tecnick\Pdf\Encrypt\Encrypt();
+        $result = $encrypt->getUserPermissionCode(['invalid-permission'], 0);
+        $this->assertEquals(2_147_422_012, $result);
+    }
+
     public function testConvertHexStringToString(): void
     {
         $encrypt = new \Com\Tecnick\Pdf\Encrypt\Encrypt();

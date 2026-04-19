@@ -29,6 +29,29 @@ namespace Test;
  */
 class OutputTest extends TestUtil
 {
+    /** @param array<string,mixed> $data */
+    protected function setRawEncryptData(OutputTestDouble $output, array $data): void
+    {
+        $property = new \ReflectionProperty(\Com\Tecnick\Pdf\Encrypt\Output::class, 'encryptdata');
+        $property->setAccessible(true);
+        $property->setValue($output, $data);
+    }
+
+    /** @return array<string,mixed> */
+    protected function getRawEncryptData(OutputTestDouble $output): array
+    {
+        $property = new \ReflectionProperty(\Com\Tecnick\Pdf\Encrypt\Output::class, 'encryptdata');
+        $property->setAccessible(true);
+        /** @var array<string,mixed> $data */
+        $data = $property->getValue($output);
+        return $data;
+    }
+
+    protected function getOutputTestDouble(): OutputTestDouble
+    {
+        return new OutputTestDouble();
+    }
+
     public function testGetPdfEncryptionObjZero(): void
     {
         $encrypt = new \Com\Tecnick\Pdf\Encrypt\Encrypt(true, \md5('file_id'), 0, ['print'], 'alpha', 'beta');
@@ -87,5 +110,50 @@ class OutputTest extends TestUtil
         $pon = 122;
         $result = $encrypt->getPdfEncryptionObj($pon);
         $this->assertTrue(\strlen($result) > 100);
+    }
+
+    public function testSetMissingValuesSetsDefaultEncryptMetadata(): void
+    {
+        $output = $this->getOutputTestDouble();
+        $data = $this->getRawEncryptData($output);
+        unset($data['EncryptMetadata']);
+        $this->setRawEncryptData($output, $data);
+
+        $output->callSetMissingValues();
+
+        $result = $this->getRawEncryptData($output);
+        $this->assertTrue($result['EncryptMetadata']);
+    }
+
+    public function testSetMissingValuesReturnsWhenCfIsEmpty(): void
+    {
+        $output = $this->getOutputTestDouble();
+        $data = $this->getRawEncryptData($output);
+        $data['CF'] = [];
+        $this->setRawEncryptData($output, $data);
+
+        $output->callSetMissingValues();
+
+        $result = $this->getRawEncryptData($output);
+        $this->assertSame([], $result['CF']);
+    }
+
+    public function testSetMissingValuesReturnsWhenCfEncryptMetadataExists(): void
+    {
+        $output = $this->getOutputTestDouble();
+        $data = $this->getRawEncryptData($output);
+        $data['CF'] = [
+            'EncryptMetadata' => false,
+        ];
+        $this->setRawEncryptData($output, $data);
+
+        $output->callSetMissingValues();
+
+        $result = $this->getRawEncryptData($output);
+        $this->assertIsArray($result['CF']);
+        /** @var array<string,mixed> $cfdata */
+        $cfdata = $result['CF'];
+        $this->assertArrayHasKey('EncryptMetadata', $cfdata);
+        $this->assertFalse((bool) $cfdata['EncryptMetadata']);
     }
 }
