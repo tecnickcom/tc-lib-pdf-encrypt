@@ -18,6 +18,8 @@ If this library helps secure your PDFs, please consider [supporting development 
 
 `tc-lib-pdf-encrypt` implements core encryption routines used by PDF generation and processing stacks, including password handling and permission flags.
 
+The package encapsulates PDF security mechanics behind a focused API so consuming libraries can apply encryption policies without reimplementing cryptographic details. It is built for interoperability with standard PDF readers and for clear separation between document logic and security concerns.
+
 | | |
 |---|---|
 | **Namespace** | `\Com\Tecnick\Pdf\Encrypt` |
