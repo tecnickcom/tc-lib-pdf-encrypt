@@ -64,6 +64,59 @@ class AESTest extends TestUtil
         $this->assertEquals(\strlen($enc_a), \strlen($enc_c));
     }
 
+    /**
+     * AES::encrypt() output = 16-byte IV + padded ciphertext.
+     * padded_len = ceil(n/16)*16 when n%16 != 0, else n.
+     * Total = padded_len + 16.
+     *
+     * With the old truncation bug, pad() always produced 16 bytes, so every
+     * plaintext — no matter how long — produced a 32-byte output.  These tests
+     * verify that the output size grows correctly with the plaintext length.
+     */
+    public function testEncrypt128LongData(): void
+    {
+        $aes = $this->getTestObject();
+        $key = '0123456789abcdef'; // 16 bytes = 128 bit KEY
+
+        // 17 bytes → padded to 32 → 32 ciphertext + 16 IV = 48
+        $enc17 = $aes->encrypt(\str_repeat('x', 17), $key, 'aes-128-cbc');
+        $this->assertSame(48, \strlen($enc17));
+
+        // 32 bytes → padded to 32 (already multiple) → 32 + 16 = 48
+        $enc32 = $aes->encrypt(\str_repeat('x', 32), $key, 'aes-128-cbc');
+        $this->assertSame(48, \strlen($enc32));
+
+        // 33 bytes → padded to 48 → 48 + 16 = 64
+        $enc33 = $aes->encrypt(\str_repeat('x', 33), $key, 'aes-128-cbc');
+        $this->assertSame(64, \strlen($enc33));
+
+        // Short input must produce shorter output than long input.
+        $encShort = $aes->encrypt('alpha', $key, 'aes-128-cbc'); // 5 bytes → 32
+        $this->assertGreaterThan(\strlen($encShort), \strlen($enc33));
+    }
+
+    public function testEncrypt256LongData(): void
+    {
+        $aes = $this->getTestObject();
+        $key = '0123456789abcdef0123456789abcdef'; // 32 bytes = 256 bit KEY
+
+        // 17 bytes → padded to 32 → 32 ciphertext + 16 IV = 48
+        $enc17 = $aes->encrypt(\str_repeat('x', 17), $key, 'aes-256-cbc');
+        $this->assertSame(48, \strlen($enc17));
+
+        // 32 bytes → padded to 32 (already multiple) → 32 + 16 = 48
+        $enc32 = $aes->encrypt(\str_repeat('x', 32), $key, 'aes-256-cbc');
+        $this->assertSame(48, \strlen($enc32));
+
+        // 100 bytes → padded to 112 → 112 + 16 = 128
+        $enc100 = $aes->encrypt(\str_repeat('x', 100), $key, 'aes-256-cbc');
+        $this->assertSame(128, \strlen($enc100));
+
+        $aesThirtytwo = new \Com\Tecnick\Pdf\Encrypt\Type\AESThirtytwo();
+        $enc100b = $aesThirtytwo->encrypt(\str_repeat('x', 100), $key);
+        $this->assertSame(\strlen($enc100), \strlen($enc100b));
+    }
+
     public function testEncryptException(): void
     {
         $this->bcExpectException('\\' . \Com\Tecnick\Pdf\Encrypt\Exception::class);

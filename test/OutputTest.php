@@ -112,6 +112,104 @@ class OutputTest extends TestUtil
         $this->assertTrue(\strlen($result) > 100);
     }
 
+    public function testGetPdfEncryptionObjFour(): void
+    {
+        $encrypt = new \Com\Tecnick\Pdf\Encrypt\Encrypt(true, \md5('file_id'), 4, ['print'], 'alpha', 'beta');
+        $pon = 122;
+        $result = $encrypt->getPdfEncryptionObj($pon);
+        $this->assertTrue(\strlen($result) > 300);
+        $this->assertStringContainsString('/V 6', $result);
+        $this->assertStringContainsString('/R 6', $result);
+        $this->assertStringContainsString('/Length 256', $result);
+    }
+
+    /** Issue 1: EFF entry must appear for V >= 4 when embedded file encryption is enabled. */
+    public function testGetPdfEncryptionObjEff(): void
+    {
+        // V >= 4 (mode 2 = AES-128, V=4) with embedded file encryption enabled (default)
+        $encrypt = new \Com\Tecnick\Pdf\Encrypt\Encrypt(
+            true,
+            \md5('file_id'),
+            2,
+            ['print'],
+            'alpha',
+            'beta',
+            null,
+            true,   // encryptMetadata
+            true    // encryptEmbeddedFiles
+        );
+        $pon = 0;
+        $result = $encrypt->getPdfEncryptionObj($pon);
+        $this->assertStringContainsString('/EFF /StdCF', $result);
+    }
+
+    /** Issue 1: No EFF entry when embedded file encryption is disabled. */
+    public function testGetPdfEncryptionObjNoEff(): void
+    {
+        $encrypt = new \Com\Tecnick\Pdf\Encrypt\Encrypt(
+            true,
+            \md5('file_id'),
+            2,
+            ['print'],
+            'alpha',
+            'beta',
+            null,
+            true,   // encryptMetadata
+            false   // encryptEmbeddedFiles = false
+        );
+        $pon = 0;
+        $result = $encrypt->getPdfEncryptionObj($pon);
+        $this->assertStringNotContainsString('/EFF', $result);
+    }
+
+    /** Issue 3: EncryptMetadata=false must appear in standard-mode output. */
+    public function testGetPdfEncryptionObjEncryptMetadataFalse(): void
+    {
+        $encrypt = new \Com\Tecnick\Pdf\Encrypt\Encrypt(
+            true,
+            \md5('file_id'),
+            3,
+            ['print'],
+            'alpha',
+            'beta',
+            null,
+            false   // encryptMetadata = false
+        );
+        $pon = 0;
+        $result = $encrypt->getPdfEncryptionObj($pon);
+        $this->assertStringContainsString('/EncryptMetadata false', $result);
+    }
+
+    /** Issue 3: EncryptMetadata=true (default) must appear as true in output. */
+    public function testGetPdfEncryptionObjEncryptMetadataTrue(): void
+    {
+        $encrypt = new \Com\Tecnick\Pdf\Encrypt\Encrypt(
+            true,
+            \md5('file_id'),
+            3,
+            ['print'],
+            'alpha',
+            'beta'
+        );
+        $pon = 0;
+        $result = $encrypt->getPdfEncryptionObj($pon);
+        $this->assertStringContainsString('/EncryptMetadata true', $result);
+    }
+
+    /** Issue 4: mode 4 pubkey output must contain Recipients. */
+    public function testGetPdfEncryptionObjFourPub(): void
+    {
+        $pubkeys = [[
+            'c' => __DIR__ . '/data/cert.pem',
+            'p' => ['print'],
+        ]];
+        $encrypt = new \Com\Tecnick\Pdf\Encrypt\Encrypt(true, \md5('file_id'), 4, ['print'], 'alpha', 'beta', $pubkeys);
+        $pon = 122;
+        $result = $encrypt->getPdfEncryptionObj($pon);
+        $this->assertTrue(\strlen($result) > 200);
+        $this->assertStringContainsString('/V 6', $result);
+    }
+
     public function testSetMissingValuesSetsDefaultEncryptMetadata(): void
     {
         $output = $this->getOutputTestDouble();

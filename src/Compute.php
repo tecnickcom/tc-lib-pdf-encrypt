@@ -60,7 +60,7 @@ abstract class Compute extends \Com\Tecnick\Pdf\Encrypt\Data
         if (($key == '') && ($type == $this->encryptdata['mode'])) {
             if ($this->encryptdata['mode'] < 3) {
                 $key = $this->getObjectKey($objnum);
-            } elseif ($this->encryptdata['mode'] == 3) {
+            } else { // mode >= 3: AES-256 (R5 or R6) — use the full document key
                 $key = $this->encryptdata['key'];
             }
         }
@@ -139,7 +139,12 @@ abstract class Compute extends \Com\Tecnick\Pdf\Encrypt\Data
      */
     protected function getUEValue(): string
     {
-        $hashkey = \hash('sha256', $this->encryptdata['user_password'] . $this->encryptdata['UKS'], true);
+        if ($this->encryptdata['mode'] == 4) { // R6: use Algorithm 2.B
+            $hashkey = $this->hash2B($this->encryptdata['user_password'], $this->encryptdata['UKS']);
+        } else { // R5: use SHA-256
+            $hashkey = \hash('sha256', $this->encryptdata['user_password'] . $this->encryptdata['UKS'], true);
+        }
+
         return $this->encrypt('AESnopad', $this->encryptdata['key'], $hashkey);
     }
 
@@ -148,11 +153,20 @@ abstract class Compute extends \Com\Tecnick\Pdf\Encrypt\Data
      */
     protected function getOEValue(): string
     {
-        $hashkey = \hash(
-            'sha256',
-            $this->encryptdata['owner_password'] . $this->encryptdata['OKS'] . $this->encryptdata['U'],
-            true
-        );
+        if ($this->encryptdata['mode'] == 4) { // R6: use Algorithm 2.B
+            $hashkey = $this->hash2B(
+                $this->encryptdata['owner_password'],
+                $this->encryptdata['OKS'],
+                $this->encryptdata['U']
+            );
+        } else { // R5: use SHA-256
+            $hashkey = \hash(
+                'sha256',
+                $this->encryptdata['owner_password'] . $this->encryptdata['OKS'] . $this->encryptdata['U'],
+                true
+            );
+        }
+
         return $this->encrypt('AESnopad', $this->encryptdata['key'], $hashkey);
     }
 
@@ -182,14 +196,19 @@ abstract class Compute extends \Com\Tecnick\Pdf\Encrypt\Data
             return \substr($enc, 0, 32);
         }
 
-        // AES-256 ($this->encryptdata['mode'] = 3)
+        // AES-256 ($this->encryptdata['mode'] >= 3)
         $seed = $this->encrypt('MD5-16', $this->encrypt('seed'), 'H*');
         // User Validation Salt
         $this->encryptdata['UVS'] = \substr($seed, 0, 8);
         // User Key Salt
         $this->encryptdata['UKS'] = \substr($seed, 8, 16);
-        return \hash('sha256', $this->encryptdata['user_password'] . $this->encryptdata['UVS'], true)
-            . $this->encryptdata['UVS'] . $this->encryptdata['UKS'];
+        if ($this->encryptdata['mode'] == 4) { // R6: Algorithm 2.B
+            $uHash = $this->hash2B($this->encryptdata['user_password'], $this->encryptdata['UVS']);
+        } else { // R5: simple SHA-256
+            $uHash = \hash('sha256', $this->encryptdata['user_password'] . $this->encryptdata['UVS'], true);
+        }
+
+        return $uHash . $this->encryptdata['UVS'] . $this->encryptdata['UKS'];
     }
 
     /**
@@ -222,17 +241,76 @@ abstract class Compute extends \Com\Tecnick\Pdf\Encrypt\Data
             return $enc;
         }
 
-        // AES-256 ($this->encryptdata['mode'] = 3)
+        // AES-256 ($this->encryptdata['mode'] >= 3)
         $seed = $this->encrypt('MD5-16', $this->encrypt('seed'), 'H*');
         // Owner Validation Salt
         $this->encryptdata['OVS'] = \substr($seed, 0, 8);
         // Owner Key Salt
         $this->encryptdata['OKS'] = \substr($seed, 8, 16);
-        return \hash(
-            'sha256',
-            $this->encryptdata['owner_password'] . $this->encryptdata['OVS'] . $this->encryptdata['U'],
-            true
-        ) . $this->encryptdata['OVS'] . $this->encryptdata['OKS'];
+        if ($this->encryptdata['mode'] == 4) { // R6: Algorithm 2.B
+            $oHash = $this->hash2B(
+                $this->encryptdata['owner_password'],
+                $this->encryptdata['OVS'],
+                $this->encryptdata['U']
+            );
+        } else { // R5: simple SHA-256
+            $oHash = \hash(
+                'sha256',
+                $this->encryptdata['owner_password'] . $this->encryptdata['OVS'] . $this->encryptdata['U'],
+                true
+            );
+        }
+
+        return $oHash . $this->encryptdata['OVS'] . $this->encryptdata['OKS'];
+    }
+
+    /**
+     * Compute Algorithm 2.B hash (ISO 32000-2 / PDF 2.0) for AES-256 R6 key derivation.
+     *
+     * Implements the iterative SHA-256/384/512 + AES-128-CBC hash described in
+     * ISO 32000-2 section 7.6.4.3.4 (Algorithm 2.B).
+     *
+     * @param string $password  UTF-8 password (already truncated to ≤ 127 bytes).
+     * @param string $salt      8-byte validation or key salt.
+     * @param string $userHash  48-byte U value for owner-side calculations; empty for user-side.
+     *
+     * @throws EncException When the internal AES-128-CBC step fails.
+     */
+    protected function hash2B(string $password, string $salt, string $userHash = ''): string
+    {
+        $hashK = \hash('sha256', $password . $salt, true);
+        $round = 0;
+        do {
+            // inputBlock length is always 64 * (len(password) + 32 + len(userHash)).
+            // 64 is a multiple of 16, so inputBlock is always AES-block-aligned (no padding needed).
+            $inputBlock = \str_repeat($password . $hashK . $userHash, 64);
+            $encrypted = \openssl_encrypt(
+                $inputBlock,
+                'aes-128-cbc',
+                \substr($hashK, 0, 16),
+                OPENSSL_RAW_DATA | OPENSSL_ZERO_PADDING,
+                \substr($hashK, 16, 16)
+            );
+            if ($encrypted === false) {
+                throw new EncException('AES-128-CBC encryption failed in hash2B');
+            }
+
+            $sum = 0;
+            for ($idx = 0; $idx < 16; ++$idx) {
+                $sum += \ord($encrypted[$idx]);
+            }
+
+            $algo = match ($sum % 3) {
+                0 => 'sha256',
+                1 => 'sha384',
+                default => 'sha512',
+            };
+            $hashK = \hash($algo, $encrypted, true);
+            ++$round;
+            $lastByte = \ord($encrypted[\strlen($encrypted) - 1]);
+        } while (!($round >= 64 && $lastByte <= ($round - 32)));
+
+        return \substr($hashK, 0, 32);
     }
 
     /**
@@ -253,7 +331,7 @@ abstract class Compute extends \Com\Tecnick\Pdf\Encrypt\Data
     protected function generateStandardEncryptionKey(): void
     {
         $keybytelen = ($this->encryptdata['Length'] / 8);
-        if ($this->encryptdata['mode'] == 3) { // AES-256
+        if ($this->encryptdata['mode'] >= 3) { // AES-256 (R5 or R6)
             // generate 256 bit random key
             $this->encryptdata['key'] = \substr(\hash('sha256', $this->encrypt('seed'), true), 0, $keybytelen);
             // truncate passwords
@@ -267,9 +345,9 @@ abstract class Compute extends \Com\Tecnick\Pdf\Encrypt\Data
             // Computing the encryption dictionary's Perms (permissions) value
             $perms = $this->getEncPermissionsString($this->encryptdata['protection']); // bytes 0-3
             $perms .= \chr(255) . \chr(255) . \chr(255) . \chr(255); // bytes 4-7
-            $perms .= 'T'; // $this->encryptdata['CF']['EncryptMetadata'] is never set, so we always encrypt
+            $perms .= ($this->encryptdata['EncryptMetadata'] ? 'T' : 'F'); // byte 8: EncryptMetadata flag
             $perms .= 'adb'; // bytes 9-11
-            $perms .= 'nick'; // bytes 12-15
+            $perms .= \openssl_random_pseudo_bytes(4); // bytes 12-15 must be random per PDF spec
             $this->encryptdata['perms'] = $this->encrypt('AESnopad', $perms, $this->encryptdata['key']);
         } else { // RC4-40, RC4-128, AES-128
             // Pad passwords
@@ -417,7 +495,7 @@ abstract class Compute extends \Com\Tecnick\Pdf\Encrypt\Data
         }
 
         // calculate encryption key
-        if ($this->encryptdata['mode'] == 3) { // AES-256
+        if ($this->encryptdata['mode'] >= 3) { // AES-256 (R5/R6)
             $this->encryptdata['key'] = \substr(\hash('sha256', $seed . $recipient_bytes, true), 0, $keybytelen);
         } else { // RC4-40, RC4-128, AES-128
             $this->encryptdata['key'] = \substr(\sha1($seed . $recipient_bytes, true), 0, $keybytelen);

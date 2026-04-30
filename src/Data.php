@@ -143,8 +143,20 @@ abstract class Data extends \Com\Tecnick\Pdf\Encrypt\Output
             'Recipients' => [],
         ],
         3 => [
-            // AES 256 bit
+            // AES 256 bit (R5, Acrobat 9 / PDF 1.7 extension)
             'V' => 5,
+            'Length' => 256,
+            'CF' => [
+                'CFM' => 'AESV3',
+                'Length' => 32,
+                'AuthEvent' => 'DocOpen',
+            ],
+            'SubFilter' => 'adbe.pkcs7.s5',
+            'Recipients' => [],
+        ],
+        4 => [
+            // AES 256 bit R6 (PDF 2.0 / ISO 32000-2)
+            'V' => 6,
             'Length' => 256,
             'CF' => [
                 'CFM' => 'AESV3',
@@ -165,7 +177,8 @@ abstract class Data extends \Com\Tecnick\Pdf\Encrypt\Output
         0 => 'RCFourFive',            // RC4-40
         1 => 'RCFourSixteen',         // RC4-128
         2 => 'AESSixteen',            // AES-128
-        3 => 'AESThirtytwo',          // AES-256
+        3 => 'AESThirtytwo',          // AES-256 (R5)
+        4 => 'AESThirtytwo',          // AES-256 (R6)
         'RC4' => 'RCFour',            // RC4-40
         'RC4-40' => 'RCFourFive',     // RC4-40
         'RC4-128' => 'RCFourSixteen', // RC4-128

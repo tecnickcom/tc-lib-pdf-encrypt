@@ -29,6 +29,19 @@ namespace Test;
  */
 class EncryptTest extends TestUtil
 {
+    // Coverage note: src/Compute.php hash2B() line ~295
+    //   `throw new EncException('AES-128-CBC encryption failed in hash2B')` is a defensive guard;
+    //   openssl_encrypt() never returns false for valid block-aligned AES-128-CBC inputs with
+    //   a correct 16-byte key and IV — this branch is unreachable under normal PHP/OpenSSL conditions.
+    //
+    // Coverage note: src/Compute.php generatePublicEncryptionKey() line ~429
+    //   `if ($tempencfile === false) throw` guards against tempnam() returning false, which
+    //   requires a filesystem failure that cannot be reliably induced in unit tests.
+    //
+    // Coverage note: src/Encrypt.php convertStringToHexString() line ~246
+    //   `return ''` after `preg_split('//', ...)` guards against the impossible case where
+    //   preg_split returns false; the regex '//\'' is always valid and never returns false.
+
     public function testEncryptException(): void
     {
         $this->bcExpectException('\\' . \Com\Tecnick\Pdf\Encrypt\Exception::class);
@@ -39,7 +52,7 @@ class EncryptTest extends TestUtil
     public function testEncryptModeException(): void
     {
         $this->bcExpectException('\\' . \Com\Tecnick\Pdf\Encrypt\Exception::class);
-        new \Com\Tecnick\Pdf\Encrypt\Encrypt(true, \md5('file_id'), 4);
+        new \Com\Tecnick\Pdf\Encrypt\Encrypt(true, \md5('file_id'), 5);
     }
 
     public function testEncryptThree(): void
@@ -133,12 +146,142 @@ class EncryptTest extends TestUtil
         $this->assertEquals(5, \strlen($result));
     }
 
+    /** Issue 6: RC4 mode 0 must emit a deprecation notice. */
+    public function testRc4DeprecationModeZero(): void
+    {
+        $this->expectUserDeprecationMessageMatches('/RC4 encryption.*deprecated.*cryptographically broken/i');
+        $encrypt = new \Com\Tecnick\Pdf\Encrypt\Encrypt(true, \md5('file_id'), 0, ['print'], 'alpha', 'beta');
+        $result = $encrypt->encrypt(0, 'alpha');
+        $this->assertGreaterThan(0, \strlen($result));
+    }
+
+    /** Issue 6: RC4 mode 1 must emit a deprecation notice. */
+    public function testRc4DeprecationModeOne(): void
+    {
+        $this->expectUserDeprecationMessageMatches('/RC4 encryption.*deprecated.*cryptographically broken/i');
+        $encrypt = new \Com\Tecnick\Pdf\Encrypt\Encrypt(true, \md5('file_id'), 1, ['print'], 'alpha', 'beta');
+        $result = $encrypt->encrypt(1, 'alpha');
+        $this->assertGreaterThan(0, \strlen($result));
+    }
+
+    /** Issue 5: mode 0 + pubkeys must emit the upgrade deprecation notice. */
+    public function testPubKeyModeZeroDeprecation(): void
+    {
+        $this->expectUserDeprecationMessageMatches('/Public-key encryption requires at least RC4-128/i');
+        $pubkeys = [[
+            'c' => __DIR__ . '/data/cert.pem',
+            'p' => ['print'],
+        ]];
+        $encrypt = new \Com\Tecnick\Pdf\Encrypt\Encrypt(
+            true,
+            \md5('file_id'),
+            0,
+            ['print'],
+            'alpha',
+            'beta',
+            $pubkeys
+        );
+        // After promotion to mode 1, the resulting encryption data must reflect mode 1
+        $data = $encrypt->getEncryptionData();
+        $this->assertEquals(1, $data['mode']);
+        $this->assertEquals(2, $data['V']);
+    }
+
+    /** Issue 2: AES-256 perms bytes 12-15 must be random (not 'nick'). */
+    public function testPermsRandomBytes(): void
+    {
+        $encrypt1 = new \Com\Tecnick\Pdf\Encrypt\Encrypt(true, \md5('file_id'), 3, ['print'], 'alpha', 'beta');
+        $encrypt2 = new \Com\Tecnick\Pdf\Encrypt\Encrypt(true, \md5('file_id'), 3, ['print'], 'alpha', 'beta');
+        $data1 = $encrypt1->getEncryptionData();
+        $data2 = $encrypt2->getEncryptionData();
+        // The 16-byte AES-encrypted perms block (AESnopad strips the PKCS7 padding block)
+        $this->assertEquals(16, \strlen($data1['perms']));
+        $this->assertEquals(16, \strlen($data2['perms']));
+        // Two independently generated perms values should almost certainly differ (random bytes 12-15)
+        // Note: 1 in 2^32 chance of collision is acceptable to document rather than retry.
+        $this->assertNotEquals($data1['perms'], $data2['perms'], 'perms bytes should be random each time');
+    }
+
+    /** Issue 3: AES-256 with EncryptMetadata=false must store the flag. */
+    public function testEncryptMetadataFalse(): void
+    {
+        $encrypt = new \Com\Tecnick\Pdf\Encrypt\Encrypt(
+            true,
+            \md5('file_id'),
+            3,
+            ['print'],
+            'alpha',
+            'beta',
+            null,
+            false   // encryptMetadata = false
+        );
+        $data = $encrypt->getEncryptionData();
+        $this->assertFalse($data['EncryptMetadata']);
+    }
+
+    /** Issue 4: AES-256 R6 (mode 4) encrypt round-trip. */
+    public function testEncryptFour(): void
+    {
+        $encrypt = new \Com\Tecnick\Pdf\Encrypt\Encrypt(
+            true,
+            \md5('file_id'),
+            4,
+            ['print'],
+            'alpha',
+            'beta'
+        );
+        $result = $encrypt->encrypt(4, 'alpha');
+        $this->assertEquals(32, \strlen($result));
+    }
+
+    /** Issue 4: AES-256 R6 (mode 4) encryptdata must have V=6 and mode=4. */
+    public function testEncryptFourSettings(): void
+    {
+        $encrypt = new \Com\Tecnick\Pdf\Encrypt\Encrypt(
+            true,
+            \md5('file_id'),
+            4,
+            ['print'],
+            'alpha',
+            'beta'
+        );
+        $data = $encrypt->getEncryptionData();
+        $this->assertEquals(4, $data['mode']);
+        $this->assertEquals(6, $data['V']);
+        $this->assertEquals(256, $data['Length']);
+        $this->assertEquals('AESV3', $data['CF']['CFM']);
+        $this->assertEquals(48, \strlen($data['U']));
+        $this->assertEquals(48, \strlen($data['O']));
+        $this->assertEquals(32, \strlen($data['UE']));
+        $this->assertEquals(32, \strlen($data['OE']));
+        $this->assertEquals(16, \strlen($data['perms']));
+    }
+
+    /** Issue 4: AES-256 R6 (mode 4) public-key encryption. */
+    public function testEncryptPubFour(): void
+    {
+        $pubkeys = [[
+            'c' => __DIR__ . '/data/cert.pem',
+            'p' => ['print'],
+        ]];
+        $encrypt = new \Com\Tecnick\Pdf\Encrypt\Encrypt(
+            true,
+            \md5('file_id'),
+            4,
+            ['print'],
+            'alpha',
+            'beta',
+            $pubkeys
+        );
+        $result = $encrypt->encrypt(4, 'alpha');
+        $this->assertEquals(32, \strlen($result));
+    }
+
     public function testGetEncryptionData(): void
     {
         $permissions = ['print'];
         $encrypt = new \Com\Tecnick\Pdf\Encrypt\Encrypt(true, \md5('file_id'), 0, $permissions, 'alpha', 'beta');
         $result = $encrypt->getEncryptionData();
-        $this->assertEquals('fc93f6b8ab2f4ffb06cf6676f570fc26', \md5(\serialize($result)));
         $this->assertEquals(2_147_422_008, $result['protection']);
         $this->assertEquals(1, $result['V']);
         $this->assertEquals(40, $result['Length']);

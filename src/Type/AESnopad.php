@@ -92,6 +92,47 @@ class AESnopad
     }
 
     /**
+     * Decrypt data that was produced by encrypt().
+     *
+     * encrypt() zero-pads the plaintext to 16-byte alignment, encrypts with PKCS7
+     * (which appends one extra 16-byte block), then strips that trailing block.
+     * This method decrypts with OPENSSL_ZERO_PADDING so no PKCS7 validation is
+     * applied, recovering the zero-padded plaintext. When the original plaintext
+     * length is known, the caller should strip any trailing zero bytes.
+     *
+     * @param string $data  Encrypted data (produced by encrypt()).
+     * @param string $key   Encryption key.
+     * @param string $ivect Initialization vector (default: 16 zero bytes).
+     * @param string $mode  Cipher (default: aes-256-cbc).
+     *
+     * @return string Decrypted data string.
+     *
+     * @throws EncException When decryption fails.
+     */
+    public function decrypt(
+        string $data,
+        string $key,
+        string $ivect = self::IVECT,
+        string $mode = 'aes-256-cbc'
+    ): string {
+        $this->checkCipher($mode);
+
+        $dec = \openssl_decrypt(
+            $data,
+            $mode,
+            $this->pad($key, (2 * self::BLOCKSIZE)),
+            OPENSSL_RAW_DATA | OPENSSL_ZERO_PADDING,
+            $ivect
+        );
+
+        if ($dec === false) {
+            throw new EncException('decryption error: ' . \openssl_error_string());
+        }
+
+        return $dec;
+    }
+
+    /**
      * Pad the input string to the specified length
      * (RFC 2898, PKCS #5: Password-Based Cryptography Specification Version 2.0)
      *
@@ -102,8 +143,12 @@ class AESnopad
      */
     protected function pad(string $data, int $length): string
     {
-        $padding = ($length - (\strlen($data) % $length));
-        return \substr($data . \str_repeat("\x00", $padding), 0, $length);
+        $rem = \strlen($data) % $length;
+        if ($rem !== 0) {
+            $data .= \str_repeat("\x00", $length - $rem);
+        }
+
+        return $data;
     }
 
     /**

@@ -153,13 +153,11 @@ abstract class Output
             $out .= '/StmF /' . $this->encryptdata['StmF'] . "\n";
             // The name of the crypt filter that shall be used when decrypting all strings in the document.
             $out .= '/StrF /' . $this->encryptdata['StrF'] . "\n";
-            /*
-            if (!empty($this->encryptdata['EFF'])) {
+            if (! empty($this->encryptdata['EFF'])) {
                 // The name of the crypt filter that shall be used when encrypting embedded file streams
                 // that do not have their own crypt filter specifier.
-                $out .= ' /EFF /'.$this->encryptdata['EFF'];
+                $out .= '/EFF /' . $this->encryptdata['EFF'] . "\n";
             }
-            */
         }
 
         return $out . ($this->getAdditionalEncDic()
@@ -219,8 +217,9 @@ abstract class Output
             }
         } else {
             $out .= '/R ';
-            if ($this->encryptdata['V'] == 5) { // AES-256
-                $out .= '5' . "\n"
+            if ($this->encryptdata['V'] >= 5) { // AES-256 R5 or R6
+                $revision = ($this->encryptdata['V'] >= 6) ? '6' : '5';
+                $out .= $revision . "\n"
                     . '/OE (' . $this->escapeString($this->encryptdata['OE']) . ')' . "\n"
                     . '/UE (' . $this->escapeString($this->encryptdata['UE']) . ')' . "\n"
                     . '/Perms (' . $this->escapeString($this->encryptdata['perms']) . ')' . "\n";
@@ -266,7 +265,8 @@ abstract class Output
             return;
         }
 
+        // Inherit the top-level EncryptMetadata flag so /CF EncryptMetadata matches.
         /** @phpstan-ignore-next-line */
-        $this->encryptdata['CF']['EncryptMetadata'] = true;
+        $this->encryptdata['CF']['EncryptMetadata'] = $this->encryptdata['EncryptMetadata'];
     }
 }

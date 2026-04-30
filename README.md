@@ -30,15 +30,42 @@ The package encapsulates PDF security mechanics behind a focused API so consumin
 
 ---
 
+## Security Notice
+
+> **RC4 modes (0 and 1) are cryptographically broken and deprecated.**
+> RC4-40 (mode 0) and RC4-128 (mode 1) are no longer considered secure.
+> Both modes emit an `E_USER_DEPRECATED` notice at runtime.
+> **Use AES-128 (mode 2), AES-256 R5 (mode 3), or AES-256 R6 / PDF 2.0 (mode 4) for all new documents.**
+
+| Mode | Algorithm | Security |
+|------|-----------|----------|
+| 0    | RC4-40    | **Broken — do not use** |
+| 1    | RC4-128   | **Broken — do not use** |
+| 2    | AES-128   | Acceptable for legacy compatibility |
+| 3    | AES-256 R5 (PDF 1.7 ext.) | Recommended |
+| 4    | AES-256 R6 (PDF 2.0 / ISO 32000-2) | Recommended (most current) |
+
+---
+
 ## Features
 
-### Encryption Support
-- RC4 and AES variants for PDF object/string encryption
+### Encryption
+- RC4 and AES variants for PDF object/string encryption (modes 0–4; see Security Notice above)
+- AES-256 R6 (PDF 2.0 / ISO 32000-2, mode 4) support with Algorithm 2.B (ISO 32000-2 §7.6.4.3.4) key derivation
 - User and owner password workflows
 - Permission flag handling for document operations
+- Optional metadata encryption control (`$encryptMetadata`)
+- Optional embedded-file stream encryption (`$encryptEmbeddedFiles`, `/EFF` dictionary entry)
+- Public-key (certificate) encryption for multiple recipients
+
+### Decryption
+- Password authentication for all encryption modes (RC4-40, RC4-128, AES-128, AES-256 R5/R6)
+- Public-key (PKCS#7 / S/MIME) decryption for recipient private keys
+- Per-object key derivation for AES-128 streams
+- Round-trip `decryptString()` companion to `encryptString()`
 
 ### Integration
-- Designed for direct use by PDF writer components
+- Designed for direct use by PDF writer and reader components
 - Helpers for PDF date formatting and hex/string transforms
 - Exception-driven error handling
 
@@ -62,15 +89,43 @@ composer require tecnickcom/tc-lib-pdf-encrypt
 
 ## Quick Start
 
+### Encrypting a string
+
 ```php
 <?php
 
 require_once __DIR__ . '/vendor/autoload.php';
 
-$encrypt = new \Com\Tecnick\Pdf\Encrypt\Encrypt();
-$cipher = $encrypt->encryptString('secret payload', 12);
+// AES-256 R6 (mode 4 — recommended)
+$encrypt = new \Com\Tecnick\Pdf\Encrypt\Encrypt(
+    true,             // enabled
+    md5('unique-file-id'),
+    4,                // mode: AES-256 R6 / PDF 2.0
+    ['print', 'copy'],
+    'userpassword',
+    'ownerpassword'
+);
 
+$cipher = $encrypt->encryptString('secret payload', $objectNumber = 1);
 echo bin2hex($cipher);
+```
+
+### Decrypting a string
+
+```php
+<?php
+
+require_once __DIR__ . '/vendor/autoload.php';
+
+// Pass the encryption dictionary produced by the Encrypt instance.
+$decrypt = new \Com\Tecnick\Pdf\Encrypt\Decrypt($encrypt->getEncryptionData());
+
+if ($decrypt->authenticate('userpassword')) {
+    $plain = $decrypt->decryptString($cipher, $objectNumber = 1);
+    // For AES modes the output is zero-padded to the block size;
+    // trim trailing null bytes when the original was not block-aligned.
+    echo rtrim($plain, "\x00");
+}
 ```
 
 ### OpenSSL 3 Note

@@ -67,8 +67,8 @@ class Encrypt extends \Com\Tecnick\Pdf\Encrypt\Compute
      *                // PDF content could be generated. When this is not set, printing is limited to a
      *                // low-level representation of the appearance, possibly of degraded quality.
      *
-     * @param string $user_pass   User password. Empty by default.
-     * @param string $owner_pass  Owner password. If not specified, a random value is used.
+     * @param string $user_pass         User password. Empty by default.
+     * @param string $owner_pass        Owner password. If not specified, a random value is used.
      * @param ?array{array{'c':string, 'p':array<string>}}  $pubkeys
      *               Array of recipients containing public-key certificates ('c') and permissions ('p').
      *               For example:
@@ -77,6 +77,15 @@ class Encrypt extends \Com\Tecnick\Pdf\Encrypt\Compute
      *               openssl req -x509 -nodes -days 365000 -newkey rsa:1024 -keyout cert.pem -out cert.pem
      *               To export crt to p12: openssl pkcs12 -export -in cert.pem -out cert.p12
      *               To convert pfx certificate to pem: openssl pkcs12 -in cert.pfx -out cert.pem -nodes
+     * @param bool   $encryptMetadata   When false, document metadata streams are not encrypted
+     *                                  (adds /EncryptMetadata false to the encryption dictionary).
+     *                                  Default is true (all streams, including metadata, are encrypted).
+     * @param bool   $encryptEmbeddedFiles  When true (default), embedded file streams are encrypted
+     *                                      using the same filter as other streams (/EFF entry is added
+     *                                      for V >= 4). Set to false to leave embedded files unencrypted.
+     *
+     * @deprecated Modes 0 (RC4-40) and 1 (RC4-128) are cryptographically broken; use mode 2 or 3.
+     * @deprecated Mode 0 is not supported with public-key encryption and will be silently promoted to 1.
      */
     public function __construct(
         bool $enabled = false,
@@ -94,19 +103,55 @@ class Encrypt extends \Com\Tecnick\Pdf\Encrypt\Compute
         ],
         string $user_pass = '',
         string $owner_pass = '',
-        array|null $pubkeys = null
+        array|null $pubkeys = null,
+        bool $encryptMetadata = true,
+        bool $encryptEmbeddedFiles = true,
     ) {
         if (! $enabled) {
             return;
         }
 
         $this->encryptdata['protection'] = $this->getUserPermissionCode($permissions, $mode);
+        $this->setupEncryptionFilter($pubkeys, $mode);
 
+        if ($owner_pass == '') {
+            $owner_pass = \md5($this->encrypt('seed'));
+        }
+
+        $this->encryptdata['user_password'] = $user_pass;
+        $this->encryptdata['owner_password'] = $owner_pass;
+        $this->validateAndApplyMode($mode);
+        $this->encryptdata['EncryptMetadata'] = $encryptMetadata;
+
+        // Set EFF (embedded file filter) for V >= 4 when embedded file encryption is requested
+        if ($encryptEmbeddedFiles && $this->encryptdata['V'] >= 4) {
+            $this->encryptdata['EFF'] = $this->encryptdata['StmF'];
+        }
+
+        $this->encryptdata['encrypted'] = true;
+        $this->encryptdata['fileid'] = $this->convertHexStringToString($file_id);
+        $this->generateEncryptionKey();
+    }
+
+    /**
+     * Configure Filter, StmF, StrF entries and handle mode promotion for public-key mode.
+     *
+     * When $pubkeys are provided and $mode is 0 (RC4-40), mode is silently promoted to 1 (RC4-128)
+     * with a deprecation notice, because public-key security requires at least 128-bit keys.
+     *
+     * @param ?array{array{'c':string, 'p':array<string>}} $pubkeys Recipient public-key certificates.
+     * @param int                                          $mode    Encryption mode (modified by reference).
+     */
+    protected function setupEncryptionFilter(array|null $pubkeys, int &$mode): void
+    {
         if ($pubkeys !== null && $pubkeys !== []) {
-            // public-key mode
             $this->encryptdata['pubkeys'] = $pubkeys;
             if ($mode == 0) {
-                // public-Key Security requires at least 128 bit
+                // public-key Security requires at least 128 bit; upgrade silently but notify the caller
+                \trigger_error(
+                    'Public-key encryption requires at least RC4-128; mode upgraded from 0 to 1',
+                    E_USER_DEPRECATED
+                );
                 $mode = 1;
             }
 
@@ -122,16 +167,28 @@ class Encrypt extends \Com\Tecnick\Pdf\Encrypt\Compute
             $this->encryptdata['StmF'] = 'StdCF';
             $this->encryptdata['StrF'] = 'StdCF';
         }
+    }
 
-        if ($owner_pass == '') {
-            $owner_pass = \md5($this->encrypt('seed'));
+    /**
+     * Emit deprecation notices for broken modes and throw for invalid ones,
+     * then merge ENCRYPT_SETTINGS for the resolved mode.
+     *
+     * @param int $mode Resolved encryption mode (0–4).
+     *
+     * @throws EncException When mode is outside the 0–4 range.
+     */
+    protected function validateAndApplyMode(int $mode): void
+    {
+        if ($mode === 0 || $mode === 1) {
+            \trigger_error(
+                'RC4 encryption (modes 0 and 1) is deprecated and cryptographically broken;'
+                . ' use AES (mode 2 or 3)',
+                E_USER_DEPRECATED
+            );
         }
 
-        $this->encryptdata['user_password'] = $user_pass;
-        $this->encryptdata['owner_password'] = $owner_pass;
-
-        if (($mode < 0) || ($mode > 3)) {
-            throw new EncException('unknown encryption mode: ' . $this->encryptdata['mode']);
+        if (($mode < 0) || ($mode > 4)) {
+            throw new EncException('unknown encryption mode: ' . $mode);
         }
 
         $this->encryptdata['mode'] = $mode;
@@ -143,10 +200,6 @@ class Encrypt extends \Com\Tecnick\Pdf\Encrypt\Compute
             /** @phpstan-ignore-next-line */
             unset($this->encryptdata['SubFilter'], $this->encryptdata['Recipients']);
         }
-
-        $this->encryptdata['encrypted'] = true;
-        $this->encryptdata['fileid'] = $this->convertHexStringToString($file_id);
-        $this->generateEncryptionKey();
     }
 
     /**
