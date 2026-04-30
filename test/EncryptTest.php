@@ -149,42 +149,54 @@ class EncryptTest extends TestUtil
     /** Issue 6: RC4 mode 0 must emit a deprecation notice. */
     public function testRc4DeprecationModeZero(): void
     {
-        $this->expectUserDeprecationMessageMatches('/RC4 encryption.*deprecated.*cryptographically broken/i');
-        $encrypt = new \Com\Tecnick\Pdf\Encrypt\Encrypt(true, \md5('file_id'), 0, ['print'], 'alpha', 'beta');
-        $result = $encrypt->encrypt(0, 'alpha');
-        $this->assertGreaterThan(0, \strlen($result));
+        $this->bcAssertUserDeprecationMessageMatches(
+            '/RC4 encryption.*deprecated.*cryptographically broken/i',
+            function (): void {
+                $encrypt = new \Com\Tecnick\Pdf\Encrypt\Encrypt(true, \md5('file_id'), 0, ['print'], 'alpha', 'beta');
+                $result = $encrypt->encrypt(0, 'alpha');
+                $this->assertGreaterThan(0, \strlen($result));
+            }
+        );
     }
 
     /** Issue 6: RC4 mode 1 must emit a deprecation notice. */
     public function testRc4DeprecationModeOne(): void
     {
-        $this->expectUserDeprecationMessageMatches('/RC4 encryption.*deprecated.*cryptographically broken/i');
-        $encrypt = new \Com\Tecnick\Pdf\Encrypt\Encrypt(true, \md5('file_id'), 1, ['print'], 'alpha', 'beta');
-        $result = $encrypt->encrypt(1, 'alpha');
-        $this->assertGreaterThan(0, \strlen($result));
+        $this->bcAssertUserDeprecationMessageMatches(
+            '/RC4 encryption.*deprecated.*cryptographically broken/i',
+            function (): void {
+                $encrypt = new \Com\Tecnick\Pdf\Encrypt\Encrypt(true, \md5('file_id'), 1, ['print'], 'alpha', 'beta');
+                $result = $encrypt->encrypt(1, 'alpha');
+                $this->assertGreaterThan(0, \strlen($result));
+            }
+        );
     }
 
     /** Issue 5: mode 0 + pubkeys must emit the upgrade deprecation notice. */
     public function testPubKeyModeZeroDeprecation(): void
     {
-        $this->expectUserDeprecationMessageMatches('/Public-key encryption requires at least RC4-128/i');
-        $pubkeys = [[
-            'c' => __DIR__ . '/data/cert.pem',
-            'p' => ['print'],
-        ]];
-        $encrypt = new \Com\Tecnick\Pdf\Encrypt\Encrypt(
-            true,
-            \md5('file_id'),
-            0,
-            ['print'],
-            'alpha',
-            'beta',
-            $pubkeys
+        $this->bcAssertUserDeprecationMessageMatches(
+            '/Public-key encryption requires at least RC4-128/i',
+            function (): void {
+                $pubkeys = [[
+                'c' => __DIR__ . '/data/cert.pem',
+                'p' => ['print'],
+                ]];
+                $encrypt = new \Com\Tecnick\Pdf\Encrypt\Encrypt(
+                    true,
+                    \md5('file_id'),
+                    0,
+                    ['print'],
+                    'alpha',
+                    'beta',
+                    $pubkeys
+                );
+            // After promotion to mode 1, the resulting encryption data must reflect mode 1
+                $data = $encrypt->getEncryptionData();
+                $this->assertEquals(1, $data['mode']);
+                $this->assertEquals(2, $data['V']);
+            }
         );
-        // After promotion to mode 1, the resulting encryption data must reflect mode 1
-        $data = $encrypt->getEncryptionData();
-        $this->assertEquals(1, $data['mode']);
-        $this->assertEquals(2, $data['V']);
     }
 
     /** Issue 2: AES-256 perms bytes 12-15 must be random (not 'nick'). */

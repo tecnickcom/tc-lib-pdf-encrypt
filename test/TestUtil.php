@@ -38,4 +38,43 @@ class TestUtil extends TestCase
     {
         parent::expectException($exception);
     }
+
+    /**
+     * Execute a callback and assert that it triggers a matching user deprecation.
+     *
+     * @param callable():void $callback
+     */
+    public function bcAssertUserDeprecationMessageMatches(string $pattern, callable $callback): void
+    {
+        $messages = [];
+
+        \set_error_handler(
+            static function (int $errno, string $errstr) use (&$messages): bool {
+                if ($errno !== E_USER_DEPRECATED) {
+                    return false;
+                }
+
+                $messages[] = $errstr;
+                return true;
+            }
+        );
+
+        try {
+            $callback();
+        } finally {
+            \restore_error_handler();
+        }
+
+        $this->assertNotEmpty($messages, 'Expected a user deprecation but none was triggered.');
+
+        foreach ($messages as $message) {
+            if (\preg_match($pattern, $message) === 1) {
+                return;
+            }
+        }
+
+        $this->fail(
+            'User deprecation message did not match pattern ' . $pattern . '. Got: ' . \implode(' | ', $messages)
+        );
+    }
 }

@@ -139,38 +139,42 @@ class DecryptTest extends TestUtil
 
     public function testAuthenticateUserMode0(): void
     {
-        $this->expectUserDeprecationMessageMatches('/RC4 encryption.*deprecated/i');
-        $enc = new Encrypt(true, \md5('file'), 0, ['print'], 'userpass', 'ownerpass');
-        $dec = $this->decryptFromEncrypt($enc);
-        $this->assertTrue($dec->authenticate('userpass'));
-        $this->assertNotEmpty($dec->getDocumentKey());
+        $this->bcAssertUserDeprecationMessageMatches('/RC4 encryption.*deprecated/i', function (): void {
+            $enc = new Encrypt(true, \md5('file'), 0, ['print'], 'userpass', 'ownerpass');
+            $dec = $this->decryptFromEncrypt($enc);
+            $this->assertTrue($dec->authenticate('userpass'));
+            $this->assertNotEmpty($dec->getDocumentKey());
+        });
     }
 
     public function testAuthenticateOwnerMode0(): void
     {
-        $this->expectUserDeprecationMessageMatches('/RC4 encryption.*deprecated/i');
-        $enc = new Encrypt(true, \md5('file'), 0, ['print'], 'userpass', 'ownerpass');
-        $dec = $this->decryptFromEncrypt($enc);
-        $this->assertTrue($dec->authenticate('ownerpass'));
-        $this->assertNotEmpty($dec->getDocumentKey());
+        $this->bcAssertUserDeprecationMessageMatches('/RC4 encryption.*deprecated/i', function (): void {
+            $enc = new Encrypt(true, \md5('file'), 0, ['print'], 'userpass', 'ownerpass');
+            $dec = $this->decryptFromEncrypt($enc);
+            $this->assertTrue($dec->authenticate('ownerpass'));
+            $this->assertNotEmpty($dec->getDocumentKey());
+        });
     }
 
     public function testAuthenticateUserMode1(): void
     {
-        $this->expectUserDeprecationMessageMatches('/RC4 encryption.*deprecated/i');
-        $enc = new Encrypt(true, \md5('file'), 1, ['print'], 'userpass', 'ownerpass');
-        $dec = $this->decryptFromEncrypt($enc);
-        $this->assertTrue($dec->authenticate('userpass'));
-        $this->assertNotEmpty($dec->getDocumentKey());
+        $this->bcAssertUserDeprecationMessageMatches('/RC4 encryption.*deprecated/i', function (): void {
+            $enc = new Encrypt(true, \md5('file'), 1, ['print'], 'userpass', 'ownerpass');
+            $dec = $this->decryptFromEncrypt($enc);
+            $this->assertTrue($dec->authenticate('userpass'));
+            $this->assertNotEmpty($dec->getDocumentKey());
+        });
     }
 
     public function testAuthenticateOwnerMode1(): void
     {
-        $this->expectUserDeprecationMessageMatches('/RC4 encryption.*deprecated/i');
-        $enc = new Encrypt(true, \md5('file'), 1, ['print'], 'userpass', 'ownerpass');
-        $dec = $this->decryptFromEncrypt($enc);
-        $this->assertTrue($dec->authenticate('ownerpass'));
-        $this->assertNotEmpty($dec->getDocumentKey());
+        $this->bcAssertUserDeprecationMessageMatches('/RC4 encryption.*deprecated/i', function (): void {
+            $enc = new Encrypt(true, \md5('file'), 1, ['print'], 'userpass', 'ownerpass');
+            $dec = $this->decryptFromEncrypt($enc);
+            $this->assertTrue($dec->authenticate('ownerpass'));
+            $this->assertNotEmpty($dec->getDocumentKey());
+        });
     }
 
     // -------------------------------------------------------------------------
@@ -183,13 +187,14 @@ class DecryptTest extends TestUtil
      */
     public function testDecryptStringRoundtripMode0(): void
     {
-        $this->expectUserDeprecationMessageMatches('/RC4 encryption.*deprecated/i');
-        $enc = new Encrypt(true, \md5('file'), 0, ['print'], 'alpha', 'beta');
-        $plaintext = 'hello world';
-        $ciphertext = $enc->encryptString($plaintext, 1);
-        $dec = $this->decryptFromEncrypt($enc);
-        $this->assertTrue($dec->authenticate('alpha'));
-        $this->assertSame($plaintext, $dec->decryptString($ciphertext, 1));
+        $this->bcAssertUserDeprecationMessageMatches('/RC4 encryption.*deprecated/i', function (): void {
+            $enc = new Encrypt(true, \md5('file'), 0, ['print'], 'alpha', 'beta');
+            $plaintext = 'hello world';
+            $ciphertext = $enc->encryptString($plaintext, 1);
+            $dec = $this->decryptFromEncrypt($enc);
+            $this->assertTrue($dec->authenticate('alpha'));
+            $this->assertSame($plaintext, $dec->decryptString($ciphertext, 1));
+        });
     }
 
     /**
