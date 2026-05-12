@@ -66,7 +66,7 @@ class RCFourTest extends TestUtil
 
     public function testEncryptException(): void
     {
-        $this->bcExpectException('\\' . \Com\Tecnick\Pdf\Encrypt\Exception::class);
+        $this->bcExpectException(\Com\Tecnick\Pdf\Encrypt\Exception::class);
         $rcFour = $this->getTestObject();
         $rcFour->encrypt('alpha', '12345', 'ERROR');
     }

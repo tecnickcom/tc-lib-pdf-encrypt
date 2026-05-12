@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /**
  * RCFour.php
  *
@@ -53,19 +55,20 @@ class RCFour
      * @param string $mode Cipher
      *
      * @return string encrypted text
+     *
+     * @throws \Com\Tecnick\Pdf\Encrypt\Exception
      */
-    public function encrypt(
-        string $data,
-        string $key,
-        string $mode = '',
-    ): string {
+    public function encrypt(string $data, string $key, string $mode = ''): string
+    {
         if ($mode === '') {
             $mode = \strlen($key) > 5 ? 'RC4' : 'RC4-40';
-        } elseif (! \in_array($mode, self::VALID_CIPHERS)) {
+        }
+
+        if (!\in_array($mode, self::VALID_CIPHERS, strict: true)) {
             throw new EncException('invalid chipher: ' . $mode);
         }
 
-        if (! \in_array($mode, \openssl_get_cipher_methods())) {
+        if (!\in_array($mode, \openssl_get_cipher_methods(), strict: true)) {
             return $this->rc4($data, $key);
         }
 
@@ -86,31 +89,47 @@ class RCFour
      *
      * @return string encrypted text
      */
-    protected function rc4(
-        string $data,
-        string $key,
-    ): string {
+    protected function rc4(string $data, string $key): string
+    {
+        $rc4 = $this->initRc4State($key);
+        return $this->applyRc4Stream($data, $rc4);
+    }
+
+    /**
+     * @return array<int, int>
+     */
+    protected function initRc4State(string $key): array
+    {
         $pkey = \str_repeat($key, (int) ((256 / \strlen($key)) + 1));
+        /** @var array<int, int> $rc4 */
         $rc4 = \range(0, 255);
         $pos = 0;
         for ($idx = 0; $idx < 256; ++$idx) {
-            $val = $rc4[$idx];
+            $val = $rc4[$idx] ?? 0;
             $pos = ($pos + $val + \ord($pkey[$idx])) % 256;
-            $rc4[$idx] = $rc4[$pos];
+            $rc4[$idx] = $rc4[$pos] ?? 0;
             $rc4[$pos] = $val;
         }
 
+        return $rc4;
+    }
+
+    /**
+     * @param array<int, int> $rc4
+     */
+    protected function applyRc4Stream(string $data, array $rc4): string
+    {
         $len = \strlen($data);
         $posa = 0;
         $posb = 0;
         $out = '';
         for ($idx = 0; $idx < $len; ++$idx) {
             $posa = ($posa + 1) % 256;
-            $val = $rc4[$posa];
+            $val = $rc4[$posa] ?? 0;
             $posb = ($posb + $val) % 256;
-            $rc4[$posa] = $rc4[$posb];
+            $rc4[$posa] = $rc4[$posb] ?? 0;
             $rc4[$posb] = $val;
-            $pkey = $rc4[($rc4[$posa] + $rc4[$posb]) % 256];
+            $pkey = $rc4[(($rc4[$posa] ?? 0) + ($rc4[$posb] ?? 0)) % 256] ?? 0;
             $out .= \chr((\ord($data[$idx]) ^ $pkey) & 0xFF);
         }
 

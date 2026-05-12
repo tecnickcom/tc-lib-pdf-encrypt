@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /**
  * Output.php
  *
@@ -74,7 +76,7 @@ abstract class Output
      *
      * @var TEncryptData
      */
-    protected $encryptdata = [
+    protected array $encryptdata = [
         'CF' => [
             'AuthEvent' => '',
             'CFM' => '',
@@ -136,10 +138,16 @@ abstract class Output
     {
         $this->setMissingValues();
         $this->encryptdata['objid'] = ++$pon;
-        $out = $this->encryptdata['objid'] . ' 0 obj' . "\n"
-            . '<<' . "\n"
-            . '/Filter /' . $this->encryptdata['Filter'] . "\n";
-        if (! empty($this->encryptdata['SubFilter'])) {
+        $out =
+            $this->encryptdata['objid']
+            . ' 0 obj'
+            . "\n"
+            . '<<'
+            . "\n"
+            . '/Filter /'
+            . $this->encryptdata['Filter']
+            . "\n";
+        if ($this->encryptdata['SubFilter'] !== '') {
             $out .= '/SubFilter /' . $this->encryptdata['SubFilter'] . "\n";
         }
 
@@ -153,16 +161,14 @@ abstract class Output
             $out .= '/StmF /' . $this->encryptdata['StmF'] . "\n";
             // The name of the crypt filter that shall be used when decrypting all strings in the document.
             $out .= '/StrF /' . $this->encryptdata['StrF'] . "\n";
-            if (! empty($this->encryptdata['EFF'])) {
+            if ($this->encryptdata['EFF'] !== '') {
                 // The name of the crypt filter that shall be used when encrypting embedded file streams
                 // that do not have their own crypt filter specifier.
                 $out .= '/EFF /' . $this->encryptdata['EFF'] . "\n";
             }
         }
 
-        return $out . ($this->getAdditionalEncDic()
-            . '>>' . "\n"
-            . 'endobj' . "\n");
+        return $out . ($this->getAdditionalEncDic() . '>>' . "\n" . 'endobj' . "\n");
     }
 
     /**
@@ -173,31 +179,41 @@ abstract class Output
      */
     protected function getCryptFilter(): string
     {
-        $out = '/CF <<' . "\n"
-            . '/' . $this->encryptdata['StmF'] . ' <<' . "\n"
-            . '/Type /CryptFilter' . "\n"
-            . '/CFM /' . $this->encryptdata['CF']['CFM'] . "\n";  // The method used
+        $out =
+            '/CF <<'
+            . "\n"
+            . '/'
+            . $this->encryptdata['StmF']
+            . ' <<'
+            . "\n"
+            . '/Type /CryptFilter'
+            . "\n"
+            . '/CFM /'
+            . $this->encryptdata['CF']['CFM']
+            . "\n"; // The method used
         if ($this->encryptdata['pubkey']) {
             $out .= '/Recipients [';
             foreach ($this->encryptdata['Recipients'] as $rec) {
                 $out .= ' <' . $rec . '>';
             }
 
-            $out .= ' ]' . "\n"
+            $out .=
+                ' ]'
+                . "\n"
                 . '/EncryptMetadata '
-                . $this->getBooleanString($this->encryptdata['CF']['EncryptMetadata']) . "\n";
+                . $this->getBooleanString($this->encryptdata['CF']['EncryptMetadata'])
+                . "\n";
         }
 
         // The event to be used to trigger the authorization
         // that is required to access encryption keys used by this filter.
         $out .= '/AuthEvent /' . $this->encryptdata['CF']['AuthEvent'] . "\n";
-        if (! empty($this->encryptdata['CF']['Length'])) {
+        if ($this->encryptdata['CF']['Length'] !== 0) {
             // The bit length of the encryption key.
             $out .= '/Length ' . $this->encryptdata['CF']['Length'] . "\n";
         }
 
-        return $out . ('>>' . "\n"
-            . '>>' . "\n");
+        return $out . ('>>' . "\n" . '>>' . "\n");
     }
 
     /**
@@ -207,7 +223,7 @@ abstract class Output
     {
         $out = '';
         if ($this->encryptdata['pubkey']) {
-            if (($this->encryptdata['V'] < 4) && ! empty($this->encryptdata['Recipients'])) {
+            if ($this->encryptdata['V'] < 4 && $this->encryptdata['Recipients'] !== []) {
                 $out .= ' /Recipients [';
                 foreach ($this->encryptdata['Recipients'] as $rec) {
                     $out .= ' <' . $rec . '>';
@@ -215,28 +231,57 @@ abstract class Output
 
                 $out .= ' ]' . "\n";
             }
-        } else {
-            $out .= '/R ';
-            if ($this->encryptdata['V'] >= 5) { // AES-256 R5 or R6
-                $revision = ($this->encryptdata['V'] >= 6) ? '6' : '5';
-                $out .= $revision . "\n"
-                    . '/OE (' . $this->escapeString($this->encryptdata['OE']) . ')' . "\n"
-                    . '/UE (' . $this->escapeString($this->encryptdata['UE']) . ')' . "\n"
-                    . '/Perms (' . $this->escapeString($this->encryptdata['perms']) . ')' . "\n";
-            } elseif ($this->encryptdata['V'] == 4) { // AES-128
-                $out .= '4' . "\n";
-            } elseif ($this->encryptdata['V'] < 2) { // RC-40
-                $out .= '2' . "\n";
-            } else { // RC-128
-                $out .= '3' . "\n";
-            }
 
-            $out .= '/O (' . $this->escapeString($this->encryptdata['O']) . ')' . "\n"
-                . '/U (' . $this->escapeString($this->encryptdata['U']) . ')' . "\n"
-                . '/P ' . $this->encryptdata['P'] . "\n"
-                . '/EncryptMetadata '
-                . $this->getBooleanString($this->encryptdata['EncryptMetadata']) . "\n";
+            return $out;
         }
+
+        $out .= '/R ';
+        if ($this->encryptdata['V'] >= 5) { // AES-256 R5 or R6
+            $revision = $this->encryptdata['V'] >= 6 ? '6' : '5';
+            $out .=
+                $revision
+                . "\n"
+                . '/OE ('
+                . $this->escapeString($this->encryptdata['OE'])
+                . ')'
+                . "\n"
+                . '/UE ('
+                . $this->escapeString($this->encryptdata['UE'])
+                . ')'
+                . "\n"
+                . '/Perms ('
+                . $this->escapeString($this->encryptdata['perms'])
+                . ')'
+                . "\n";
+        }
+
+        if ($this->encryptdata['V'] === 4) { // AES-128
+            $out .= '4' . "\n";
+        }
+
+        if ($this->encryptdata['V'] < 2) { // RC-40
+            $out .= '2' . "\n";
+        }
+
+        if ($this->encryptdata['V'] >= 2 && $this->encryptdata['V'] < 4) { // RC-128
+            $out .= '3' . "\n";
+        }
+
+        $out .=
+            '/O ('
+            . $this->escapeString($this->encryptdata['O'])
+            . ')'
+            . "\n"
+            . '/U ('
+            . $this->escapeString($this->encryptdata['U'])
+            . ')'
+            . "\n"
+            . '/P '
+            . $this->encryptdata['P']
+            . "\n"
+            . '/EncryptMetadata '
+            . $this->getBooleanString($this->encryptdata['EncryptMetadata'])
+            . "\n";
 
         return $out;
     }
@@ -248,25 +293,11 @@ abstract class Output
      */
     protected function getBooleanString(bool $value): string
     {
-        return ($value ? 'true' : 'false');
+        return $value ? 'true' : 'false';
     }
 
     protected function setMissingValues(): void
     {
-        if (! isset($this->encryptdata['EncryptMetadata'])) {
-            $this->encryptdata['EncryptMetadata'] = true;
-        }
-
-        if (empty($this->encryptdata['CF']) || ! \is_array($this->encryptdata['CF'])) {
-            return;
-        }
-
-        if (isset($this->encryptdata['CF']['EncryptMetadata'])) {
-            return;
-        }
-
-        // Inherit the top-level EncryptMetadata flag so /CF EncryptMetadata matches.
-        /** @phpstan-ignore-next-line */
         $this->encryptdata['CF']['EncryptMetadata'] = $this->encryptdata['EncryptMetadata'];
     }
 }

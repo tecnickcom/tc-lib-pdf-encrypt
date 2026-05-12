@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /**
  * Encrypt.php
  *
@@ -84,8 +86,7 @@ class Encrypt extends \Com\Tecnick\Pdf\Encrypt\Compute
      *                                      using the same filter as other streams (/EFF entry is added
      *                                      for V >= 4). Set to false to leave embedded files unencrypted.
      *
-     * @deprecated Modes 0 (RC4-40) and 1 (RC4-128) are cryptographically broken; use mode 2 or 3.
-     * @deprecated Mode 0 is not supported with public-key encryption and will be silently promoted to 1.
+     * @throws \Com\Tecnick\Pdf\Encrypt\Exception
      */
     public function __construct(
         bool $enabled = false,
@@ -103,18 +104,18 @@ class Encrypt extends \Com\Tecnick\Pdf\Encrypt\Compute
         ],
         string $user_pass = '',
         string $owner_pass = '',
-        array|null $pubkeys = null,
+        ?array $pubkeys = null,
         bool $encryptMetadata = true,
         bool $encryptEmbeddedFiles = true,
     ) {
-        if (! $enabled) {
+        if (!$enabled) {
             return;
         }
 
         $this->encryptdata['protection'] = $this->getUserPermissionCode($permissions, $mode);
         $this->setupEncryptionFilter($pubkeys, $mode);
 
-        if ($owner_pass == '') {
+        if ($owner_pass === '') {
             $owner_pass = \md5($this->encrypt('seed'));
         }
 
@@ -142,15 +143,15 @@ class Encrypt extends \Com\Tecnick\Pdf\Encrypt\Compute
      * @param ?array{array{'c':string, 'p':array<string>}} $pubkeys Recipient public-key certificates.
      * @param int                                          $mode    Encryption mode (modified by reference).
      */
-    protected function setupEncryptionFilter(array|null $pubkeys, int &$mode): void
+    protected function setupEncryptionFilter(?array $pubkeys, int &$mode): void
     {
         if ($pubkeys !== null && $pubkeys !== []) {
             $this->encryptdata['pubkeys'] = $pubkeys;
-            if ($mode == 0) {
+            if ($mode === 0) {
                 // public-key Security requires at least 128 bit; upgrade silently but notify the caller
                 \trigger_error(
                     'Public-key encryption requires at least RC4-128; mode upgraded from 0 to 1',
-                    E_USER_DEPRECATED
+                    E_USER_DEPRECATED,
                 );
                 $mode = 1;
             }
@@ -160,13 +161,15 @@ class Encrypt extends \Com\Tecnick\Pdf\Encrypt\Compute
             $this->encryptdata['Filter'] = 'Adobe.PubSec';
             $this->encryptdata['StmF'] = 'DefaultCryptFilter';
             $this->encryptdata['StrF'] = 'DefaultCryptFilter';
-        } else {
-            // standard mode (password mode)
-            $this->encryptdata['pubkey'] = false;
-            $this->encryptdata['Filter'] = 'Standard';
-            $this->encryptdata['StmF'] = 'StdCF';
-            $this->encryptdata['StrF'] = 'StdCF';
+
+            return;
         }
+
+        // standard mode (password mode)
+        $this->encryptdata['pubkey'] = false;
+        $this->encryptdata['Filter'] = 'Standard';
+        $this->encryptdata['StmF'] = 'StdCF';
+        $this->encryptdata['StrF'] = 'StdCF';
     }
 
     /**
@@ -181,25 +184,31 @@ class Encrypt extends \Com\Tecnick\Pdf\Encrypt\Compute
     {
         if ($mode === 0 || $mode === 1) {
             \trigger_error(
-                'RC4 encryption (modes 0 and 1) is deprecated and cryptographically broken;'
-                . ' use AES (mode 2 or 3)',
-                E_USER_DEPRECATED
+                'RC4 encryption (modes 0 and 1) is deprecated and cryptographically broken; use AES (mode 2 or 3)',
+                E_USER_DEPRECATED,
             );
         }
 
-        if (($mode < 0) || ($mode > 4)) {
+        if ($mode < 0 || $mode > 4) {
             throw new EncException('unknown encryption mode: ' . $mode);
         }
 
         $this->encryptdata['mode'] = $mode;
 
-        /** @phpstan-ignore-next-line */
-        $this->encryptdata = \array_merge($this->encryptdata, self::ENCRYPT_SETTINGS[$mode]);
+        $settings = self::ENCRYPT_SETTINGS[$mode] ?? throw new EncException('unknown encryption mode: ' . $mode);
+        $this->encryptdata['V'] = $settings['V'];
+        $this->encryptdata['Length'] = $settings['Length'];
+        $this->encryptdata['CF'] = [
+            'CFM' => $settings['CF']['CFM'],
+            'Length' => (int) ($settings['CF']['Length'] ?? 0),
+            'AuthEvent' => $settings['CF']['AuthEvent'],
+            'EncryptMetadata' => $this->encryptdata['EncryptMetadata'],
+        ];
+        $this->encryptdata['SubFilter'] = $settings['SubFilter'];
+        $this->encryptdata['Recipients'] = $settings['Recipients'];
 
-        if (! $this->encryptdata['pubkey']) {
-            /** @phpstan-ignore-next-line */
-            unset($this->encryptdata['SubFilter'], $this->encryptdata['Recipients']);
-        }
+        // Keep SubFilter and Recipients keys set from ENCRYPT_SETTINGS to preserve
+        // stable array shape and avoid undefined-key access in output generation.
     }
 
     /**
@@ -221,14 +230,14 @@ class Encrypt extends \Com\Tecnick\Pdf\Encrypt\Compute
     {
         $str = ''; // string to be returned
         $bslength = \strlen($bstr);
-        if ($bslength % 2 != 0) {
+        if (($bslength % 2) !== 0) {
             // padding
             $bstr .= '0';
             ++$bslength;
         }
 
         for ($idx = 0; $idx < $bslength; $idx += 2) {
-            $str .= \chr((int) \hexdec($bstr[$idx] . $bstr[($idx + 1)]) & 0xFF);
+            $str .= \chr((int) \hexdec($bstr[$idx] . $bstr[$idx + 1]) & 0xFF);
         }
 
         return $str;
@@ -265,11 +274,12 @@ class Encrypt extends \Com\Tecnick\Pdf\Encrypt\Compute
         $length = \strlen($name);
         for ($idx = 0; $idx < $length; ++$idx) {
             $chr = $name[$idx];
-            if (\preg_match('/[0-9a-zA-Z#_=-]/', $chr) == 1) {
+            if (\preg_match('/[0-9a-zA-Z#_=-]/', $chr) === 1) {
                 $escname .= $chr;
-            } else {
-                $escname .= \sprintf('#%02X', \ord($chr));
+                continue;
             }
+
+            $escname .= \sprintf('#%02X', \ord($chr));
         }
 
         return $escname;
@@ -280,11 +290,11 @@ class Encrypt extends \Com\Tecnick\Pdf\Encrypt\Compute
      *
      * @param string $str    String to encrypt.
      * @param int    $objnum Object ID.
+     *
+     * @throws \Com\Tecnick\Pdf\Encrypt\Exception
      */
-    public function encryptString(
-        string $str,
-        int $objnum = 0,
-    ): string {
+    public function encryptString(string $str, int $objnum = 0): string
+    {
         return $this->encrypt($this->encryptdata['mode'], $str, '', $objnum);
     }
 
@@ -293,11 +303,11 @@ class Encrypt extends \Com\Tecnick\Pdf\Encrypt\Compute
      *
      * @param string $str    Data string to escape.
      * @param int    $objnum Object ID.
+     *
+     * @throws \Com\Tecnick\Pdf\Encrypt\Exception
      */
-    public function escapeDataString(
-        string $str,
-        int $objnum = 0,
-    ): string {
+    public function escapeDataString(string $str, int $objnum = 0): string
+    {
         return '(' . $this->escapeString($this->encryptString($str, $objnum)) . ')';
     }
 
@@ -308,18 +318,15 @@ class Encrypt extends \Com\Tecnick\Pdf\Encrypt\Compute
      * @param int $objnum Object ID.
      *
      * @return string escaped date string.
+     *
+     * @throws \Com\Tecnick\Pdf\Encrypt\Exception
      */
-    public function getFormattedDate(
-        int|null $time = null,
-        int $objnum = 0,
-    ): string {
+    public function getFormattedDate(?int $time = null, int $objnum = 0): string
+    {
         if ($time === null) {
             $time = \time(); // get current UTC time
         }
 
-        return $this->escapeDataString(
-            'D:' . \substr_replace(\date('YmdHisO', $time), "'", -2, 0) . "'",
-            $objnum
-        );
+        return $this->escapeDataString('D:' . \substr_replace(\date('YmdHisO', $time), "'", -2, 0) . "'", $objnum);
     }
 }

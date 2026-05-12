@@ -119,7 +119,7 @@ class AESTest extends TestUtil
 
     public function testEncryptException(): void
     {
-        $this->bcExpectException('\\' . \Com\Tecnick\Pdf\Encrypt\Exception::class);
+        $this->bcExpectException(\Com\Tecnick\Pdf\Encrypt\Exception::class);
         $aes = $this->getTestObject();
         $aes->encrypt('alpha', '12345', 'ERROR');
     }

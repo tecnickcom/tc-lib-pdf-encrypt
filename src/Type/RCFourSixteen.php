@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /**
  * RCFourSixteen.php
  *
@@ -39,11 +41,11 @@ class RCFourSixteen
      * @param string $key  Encryption key
      *
      * @return string encrypted text
+     *
+     * @throws \Com\Tecnick\Pdf\Encrypt\Exception
      */
-    public function encrypt(
-        string $data,
-        string $key,
-    ): string {
+    public function encrypt(string $data, string $key): string
+    {
         $rcFour = new RCFour();
         return $rcFour->encrypt($data, $key, 'RC4');
     }

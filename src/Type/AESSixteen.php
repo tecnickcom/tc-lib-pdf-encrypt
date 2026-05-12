@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /**
  * AESSixteen.php
  *
@@ -39,11 +41,11 @@ class AESSixteen
      * @param string $key  Encryption key
      *
      * @return string encrypted text
+     *
+     * @throws \Com\Tecnick\Pdf\Encrypt\Exception
      */
-    public function encrypt(
-        string $data,
-        string $key,
-    ): string {
+    public function encrypt(string $data, string $key): string
+    {
         $aes = new AES();
         return $aes->encrypt($data, $key, 'aes-128-cbc');
     }

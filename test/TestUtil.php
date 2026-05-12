@@ -34,7 +34,7 @@ class TestUtil extends TestCase
     /**
      * @param class-string<\Throwable> $exception
      */
-    public function bcExpectException($exception): void
+    public function bcExpectException(string $exception): void
     {
         parent::expectException($exception);
     }
@@ -48,16 +48,14 @@ class TestUtil extends TestCase
     {
         $messages = [];
 
-        \set_error_handler(
-            static function (int $errno, string $errstr) use (&$messages): bool {
-                if ($errno !== E_USER_DEPRECATED) {
-                    return false;
-                }
-
-                $messages[] = $errstr;
-                return true;
+        \set_error_handler(static function (int $errno, string $errstr) use (&$messages): bool {
+            if ($errno !== E_USER_DEPRECATED) {
+                return false;
             }
-        );
+
+            $messages[] = $errstr;
+            return true;
+        });
 
         try {
             $callback();
@@ -74,7 +72,7 @@ class TestUtil extends TestCase
         }
 
         $this->fail(
-            'User deprecation message did not match pattern ' . $pattern . '. Got: ' . \implode(' | ', $messages)
+            'User deprecation message did not match pattern ' . $pattern . '. Got: ' . \implode(' | ', $messages),
         );
     }
 }

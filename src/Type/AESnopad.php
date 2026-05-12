@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /**
  * AESnopad.php
  *
@@ -67,25 +69,27 @@ class AESnopad
      * @param string $mode  Cipher
      *
      * @return string Encrypted data string.
+     *
+     * @throws \Com\Tecnick\Pdf\Encrypt\Exception
      */
     public function encrypt(
         string $data,
         string $key,
         string $ivect = self::IVECT,
-        string $mode = 'aes-256-cbc'
+        string $mode = 'aes-256-cbc',
     ): string {
         $this->checkCipher($mode);
 
         $enc = \openssl_encrypt(
             $this->pad($data, self::BLOCKSIZE),
             $mode,
-            $this->pad($key, (2 * self::BLOCKSIZE)),
+            $this->pad($key, 2 * self::BLOCKSIZE),
             OPENSSL_RAW_DATA,
-            $ivect
+            $ivect,
         );
 
         if ($enc === false) {
-            throw new EncException('encryption error: ' . \openssl_error_string());
+            throw new EncException('encryption error: ' . (string) \openssl_error_string());
         }
 
         return \substr($enc, 0, -16);
@@ -113,20 +117,20 @@ class AESnopad
         string $data,
         string $key,
         string $ivect = self::IVECT,
-        string $mode = 'aes-256-cbc'
+        string $mode = 'aes-256-cbc',
     ): string {
         $this->checkCipher($mode);
 
         $dec = \openssl_decrypt(
             $data,
             $mode,
-            $this->pad($key, (2 * self::BLOCKSIZE)),
+            $this->pad($key, 2 * self::BLOCKSIZE),
             OPENSSL_RAW_DATA | OPENSSL_ZERO_PADDING,
-            $ivect
+            $ivect,
         );
 
         if ($dec === false) {
-            throw new EncException('decryption error: ' . \openssl_error_string());
+            throw new EncException('decryption error: ' . (string) \openssl_error_string());
         }
 
         return $dec;
@@ -160,11 +164,11 @@ class AESnopad
      */
     public function checkCipher(string $cipher): void
     {
-        if (! \in_array($cipher, self::VALID_CIPHERS)) {
+        if (!\in_array($cipher, self::VALID_CIPHERS, strict: true)) {
             throw new EncException('invalid chipher: ' . $cipher);
         }
 
-        if (! \in_array($cipher, \openssl_get_cipher_methods())) {
+        if (!\in_array($cipher, \openssl_get_cipher_methods(), strict: true)) {
             throw new EncException('unavailable chipher: ' . $cipher);
         }
     }

@@ -54,9 +54,7 @@ class AESnopadTest extends TestUtil
     private function expectedCiphertextLen(int $plainLen): int
     {
         $rem = $plainLen % AESnopad::BLOCKSIZE;
-        return $rem === 0
-            ? $plainLen
-            : $plainLen + (AESnopad::BLOCKSIZE - $rem);
+        return $rem === 0 ? $plainLen : $plainLen + (AESnopad::BLOCKSIZE - $rem);
     }
 
     // --- output-length tests (validate pad() indirectly) ---
@@ -64,20 +62,14 @@ class AESnopadTest extends TestUtil
     public function testEncryptOutputLenShortData(): void
     {
         // 5 bytes → padded to 16
-        $enc = $this->getTestObject()->encrypt(
-            \str_repeat('x', 5),
-            self::KEY256,
-        );
+        $enc = $this->getTestObject()->encrypt(\str_repeat('x', 5), self::KEY256);
         $this->assertSame($this->expectedCiphertextLen(5), \strlen($enc));
     }
 
     public function testEncryptOutputLenExactlyOneBlock(): void
     {
         // 16 bytes → already a multiple, no extra padding → 16
-        $enc = $this->getTestObject()->encrypt(
-            \str_repeat('x', 16),
-            self::KEY256,
-        );
+        $enc = $this->getTestObject()->encrypt(\str_repeat('x', 16), self::KEY256);
         $this->assertSame($this->expectedCiphertextLen(16), \strlen($enc));
     }
 
@@ -86,40 +78,28 @@ class AESnopadTest extends TestUtil
         // 17 bytes → padded to 32
         // This test would fail with the old code (which truncated data to 16 bytes,
         // producing only 16 bytes of ciphertext regardless of input length).
-        $enc = $this->getTestObject()->encrypt(
-            \str_repeat('x', 17),
-            self::KEY256,
-        );
+        $enc = $this->getTestObject()->encrypt(\str_repeat('x', 17), self::KEY256);
         $this->assertSame($this->expectedCiphertextLen(17), \strlen($enc));
     }
 
     public function testEncryptOutputLenTwoBlocks(): void
     {
         // 32 bytes → padded to 32
-        $enc = $this->getTestObject()->encrypt(
-            \str_repeat('x', 32),
-            self::KEY256,
-        );
+        $enc = $this->getTestObject()->encrypt(\str_repeat('x', 32), self::KEY256);
         $this->assertSame($this->expectedCiphertextLen(32), \strlen($enc));
     }
 
     public function testEncryptOutputLenJustOverTwoBlocks(): void
     {
         // 33 bytes → padded to 48
-        $enc = $this->getTestObject()->encrypt(
-            \str_repeat('x', 33),
-            self::KEY256,
-        );
+        $enc = $this->getTestObject()->encrypt(\str_repeat('x', 33), self::KEY256);
         $this->assertSame($this->expectedCiphertextLen(33), \strlen($enc));
     }
 
     public function testEncryptOutputLenLargeData(): void
     {
         // 100 bytes → padded to 112
-        $enc = $this->getTestObject()->encrypt(
-            \str_repeat('x', 100),
-            self::KEY256,
-        );
+        $enc = $this->getTestObject()->encrypt(\str_repeat('x', 100), self::KEY256);
         $this->assertSame($this->expectedCiphertextLen(100), \strlen($enc));
     }
 
@@ -143,12 +123,7 @@ class AESnopadTest extends TestUtil
     public function testEncryptAes128OutputLen(): void
     {
         // 17 bytes with aes-128-cbc → padded to 32
-        $enc = $this->getTestObject()->encrypt(
-            \str_repeat('x', 17),
-            self::KEY256,
-            AESnopad::IVECT,
-            'aes-128-cbc',
-        );
+        $enc = $this->getTestObject()->encrypt(\str_repeat('x', 17), self::KEY256, AESnopad::IVECT, 'aes-128-cbc');
         $this->assertSame($this->expectedCiphertextLen(17), \strlen($enc));
     }
 
@@ -169,13 +144,13 @@ class AESnopadTest extends TestUtil
 
     public function testCheckCipherInvalidName(): void
     {
-        $this->bcExpectException('\\' . \Com\Tecnick\Pdf\Encrypt\Exception::class);
+        $this->bcExpectException(\Com\Tecnick\Pdf\Encrypt\Exception::class);
         $this->getTestObject()->checkCipher('des-cbc');
     }
 
     public function testEncryptInvalidCipher(): void
     {
-        $this->bcExpectException('\\' . \Com\Tecnick\Pdf\Encrypt\Exception::class);
+        $this->bcExpectException(\Com\Tecnick\Pdf\Encrypt\Exception::class);
         $this->getTestObject()->encrypt('data', self::KEY256, AESnopad::IVECT, 'des-cbc');
     }
 }

@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /**
  * MDFiveSixteen.php
  *
@@ -35,15 +37,11 @@ class MDFiveSixteen
      * Encrypt the data
      *
      * @param string $data Data string to encrypt
-     * @param string $key  Encryption key
      *
      * @return string encrypted text
      */
-    public function encrypt(
-        string $data,
-        string $key = 'H*',
-    ): string {
-        $key = 'H*';
-        return \pack($key, \md5($data));
+    public function encrypt(string $data, string $_key = 'H*'): string
+    {
+        return \pack('H*', \md5($data));
     }
 }

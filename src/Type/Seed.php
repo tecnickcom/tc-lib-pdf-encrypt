@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /**
  * Seed.php
  *
@@ -39,12 +41,11 @@ class Seed
      * @param string $mode Default mode (openssl or raw)
      *
      * @return string seed
+     *
+     * @throws \Random\RandomException
      */
-    public function encrypt(
-        string $data = '',
-        string $key = '',
-        string $mode = 'openssl',
-    ): string {
+    public function encrypt(string $data = '', string $key = '', string $mode = 'openssl'): string
+    {
         $rnd = \uniqid(\random_int(0, \mt_getrandmax()) . microtime(true), true);
 
         if (\function_exists('posix_getpid')) {
@@ -52,16 +53,18 @@ class Seed
         }
 
         if (
-            ($mode == 'openssl')
+            $mode === 'openssl'
             && \function_exists('openssl_random_pseudo_bytes')
-            && (\strtoupper(\substr(PHP_OS, 0, 3)) !== 'WIN')
+            && \strtoupper(\substr(PHP_OS, 0, 3)) !== 'WIN'
         ) {
             // this is not used on windows systems because it is very slow for a know bug
             $rnd .= \openssl_random_pseudo_bytes(512);
-        } else {
-            for ($idx = 0; $idx < 23; ++$idx) {
-                $rnd .= \uniqid('', true);
-            }
+
+            return $rnd . $data . __DIR__ . __FILE__ . $key . \serialize($_SERVER) . microtime(true);
+        }
+
+        for ($idx = 0; $idx < 23; ++$idx) {
+            $rnd .= \uniqid('', true);
         }
 
         return $rnd . $data . __DIR__ . __FILE__ . $key . \serialize($_SERVER) . microtime(true);

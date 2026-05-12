@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /**
  * Decrypt.php
  *
@@ -16,7 +18,6 @@
 
 namespace Com\Tecnick\Pdf\Encrypt;
 
-use Com\Tecnick\Pdf\Encrypt\Exception as EncException;
 use Com\Tecnick\Pdf\Encrypt\Type\AESnopad;
 
 /**
@@ -46,7 +47,7 @@ use Com\Tecnick\Pdf\Encrypt\Type\AESnopad;
  *
  * @phpstan-import-type TEncryptData from Output
  *
- * @phpstan-type TDecryptInput array{
+ * @phpstan-type TDecryptInput TEncryptData|array{
  *     'V': int,
  *     'Length': int,
  *     'O': string,
@@ -58,7 +59,7 @@ use Com\Tecnick\Pdf\Encrypt\Type\AESnopad;
  *     'UE'?: string,
  *     'EncryptMetadata'?: bool,
  *     'pubkey'?: bool,
- *     'Recipients'?: array<string>,
+ *     'Recipients'?: array<array-key, string>,
  * }
  *
  * @SuppressWarnings("PHPMD.ExcessiveClassComplexity")
@@ -76,8 +77,27 @@ class Decrypt extends \Com\Tecnick\Pdf\Encrypt\Compute
      */
     public function __construct(array $input)
     {
-        /** @phpstan-ignore-next-line */
-        $this->encryptdata = \array_merge($this->encryptdata, $input);
+        $this->encryptdata['V'] = (int) $input['V'];
+        $this->encryptdata['Length'] = (int) $input['Length'];
+        $this->encryptdata['O'] = $input['O'];
+        $this->encryptdata['U'] = $input['U'];
+        $this->encryptdata['P'] = (int) $input['P'];
+        $this->encryptdata['fileid'] = $input['fileid'];
+        $this->encryptdata['mode'] = (int) $input['mode'];
+        $this->encryptdata['EncryptMetadata'] = $input['EncryptMetadata'] ?? $this->encryptdata['EncryptMetadata'];
+        $this->encryptdata['pubkey'] = $input['pubkey'] ?? $this->encryptdata['pubkey'];
+        if (\array_key_exists('Recipients', $input)) {
+            $this->encryptdata['Recipients'] = $input['Recipients'];
+        }
+
+        if (\array_key_exists('OE', $input)) {
+            $this->encryptdata['OE'] = $input['OE'];
+        }
+
+        if (\array_key_exists('UE', $input)) {
+            $this->encryptdata['UE'] = $input['UE'];
+        }
+
         // Ensure encrypt()-based primitives (RC4, MD5-16) are active for key derivation.
         $this->encryptdata['encrypted'] = true;
         // Clear the key — it must be recovered by a successful authenticate() call.
@@ -102,8 +122,10 @@ class Decrypt extends \Com\Tecnick\Pdf\Encrypt\Compute
      * @param string $privkeyPath Path to PEM file for public-key mode.
      *
      * @return bool True when authentication succeeds.
+     *
+     * @throws \Com\Tecnick\Pdf\Encrypt\Exception
      */
-    public function authenticate(string $password, string $privkeyPath = ''): bool
+    public function authenticate(#[\SensitiveParameter] string $password, string $privkeyPath = ''): bool
     {
         if ($this->encryptdata['pubkey']) {
             return $this->authenticatePublicKey($privkeyPath);
@@ -133,10 +155,12 @@ class Decrypt extends \Com\Tecnick\Pdf\Encrypt\Compute
      *                       in RC4 and AES-128 modes).
      *
      * @return string Decrypted data.
+     *
+     * @throws \Com\Tecnick\Pdf\Encrypt\Exception
      */
     public function decryptString(string $data, int $objnum = 0): string
     {
-        if (! $this->encryptdata['encrypted'] || empty($this->encryptdata['key'])) {
+        if (!$this->encryptdata['encrypted'] || $this->encryptdata['key'] === '') {
             return $data;
         }
 
@@ -169,8 +193,10 @@ class Decrypt extends \Com\Tecnick\Pdf\Encrypt\Compute
      *
      * First tries the password as the user password; on failure tries it as the
      * owner password.
+     *
+     * @throws \Com\Tecnick\Pdf\Encrypt\Exception
      */
-    protected function authenticatePasswordR24(string $password): bool
+    protected function authenticatePasswordR24(#[\SensitiveParameter] string $password): bool
     {
         $paddedPass = \substr($password . self::ENCPAD, 0, 32);
 
@@ -187,6 +213,8 @@ class Decrypt extends \Com\Tecnick\Pdf\Encrypt\Compute
      * Derives a candidate encryption key from the padded password and verifies
      * it against the stored U value using Algorithm 6 (PDF spec §7.6.3.4).
      * On success the verified key remains stored in $encryptdata['key'].
+     *
+     * @throws \Com\Tecnick\Pdf\Encrypt\Exception
      */
     protected function authenticateUserR24(string $paddedPass): bool
     {
@@ -208,8 +236,10 @@ class Decrypt extends \Com\Tecnick\Pdf\Encrypt\Compute
      *
      * Derives the owner key, decrypts the O entry to recover the candidate user
      * password, then delegates to authenticateUserR24.
+     *
+     * @throws \Com\Tecnick\Pdf\Encrypt\Exception
      */
-    protected function authenticateOwnerR24(string $password): bool
+    protected function authenticateOwnerR24(#[\SensitiveParameter] string $password): bool
     {
         $paddedOwner = \substr($password . self::ENCPAD, 0, 32);
         $ownerKey = $this->deriveOwnerKeyR24($paddedOwner);
@@ -221,6 +251,8 @@ class Decrypt extends \Com\Tecnick\Pdf\Encrypt\Compute
      * Derive the file encryption key for R2–R4 from a 32-byte padded user password.
      *
      * Implements Algorithm 2 from PDF spec §7.6.3.3.
+     *
+     * @throws \Com\Tecnick\Pdf\Encrypt\Exception
      */
     protected function deriveKeyR24(string $paddedPass): string
     {
@@ -229,7 +261,7 @@ class Decrypt extends \Com\Tecnick\Pdf\Encrypt\Compute
 
         $tmp = $this->encrypt(
             'MD5-16',
-            $paddedPass . $this->encryptdata['O'] . $permBytes . $this->encryptdata['fileid']
+            $paddedPass . $this->encryptdata['O'] . $permBytes . $this->encryptdata['fileid'],
         );
 
         if ($this->encryptdata['mode'] > 0) {
@@ -257,6 +289,8 @@ class Decrypt extends \Com\Tecnick\Pdf\Encrypt\Compute
 
     /**
      * Derive the owner key from a 32-byte padded owner password for R2–R4.
+     *
+     * @throws \Com\Tecnick\Pdf\Encrypt\Exception
      */
     protected function deriveOwnerKeyR24(string $paddedOwnerPass): string
     {
@@ -278,6 +312,8 @@ class Decrypt extends \Com\Tecnick\Pdf\Encrypt\Compute
      * Reverses the iterative RC4 encryption applied by getOValue() in Compute.
      *
      * @SuppressWarnings("PHPMD.CyclomaticComplexity")
+     *
+     * @throws \Com\Tecnick\Pdf\Encrypt\Exception
      */
     protected function decryptOToUserPass(string $ownerKey): string
     {
@@ -308,8 +344,10 @@ class Decrypt extends \Com\Tecnick\Pdf\Encrypt\Compute
      * Authenticate a password for R5 (mode 3) or R6 (mode 4).
      *
      * Tries the password as the user password, then as the owner password.
+     *
+     * @throws \Com\Tecnick\Pdf\Encrypt\Exception
      */
-    protected function authenticatePasswordR5R6(string $password): bool
+    protected function authenticatePasswordR5R6(#[\SensitiveParameter] string $password): bool
     {
         if ($this->authenticateUserR5R6($password)) {
             $this->recoverKeyFromUser($password);
@@ -328,8 +366,10 @@ class Decrypt extends \Com\Tecnick\Pdf\Encrypt\Compute
      * Verify $password as the user password for R5/R6 (Algorithm 11/13).
      *
      * Computes hash(password ∥ U[32..39]) and compares to U[0..32].
+     *
+     * @throws \Com\Tecnick\Pdf\Encrypt\Exception
      */
-    protected function authenticateUserR5R6(string $password): bool
+    protected function authenticateUserR5R6(#[\SensitiveParameter] string $password): bool
     {
         $uvs = \substr($this->encryptdata['U'], 32, 8);
         $expected = \substr($this->encryptdata['U'], 0, 32);
@@ -340,8 +380,10 @@ class Decrypt extends \Com\Tecnick\Pdf\Encrypt\Compute
      * Verify $password as the owner password for R5/R6 (Algorithm 13/15).
      *
      * Computes hash(password ∥ O[32..39] ∥ U[0..48]) and compares to O[0..32].
+     *
+     * @throws \Com\Tecnick\Pdf\Encrypt\Exception
      */
-    protected function authenticateOwnerR5R6(string $password): bool
+    protected function authenticateOwnerR5R6(#[\SensitiveParameter] string $password): bool
     {
         $ovs = \substr($this->encryptdata['O'], 32, 8);
         $userHash = \substr($this->encryptdata['U'], 0, 48);
@@ -351,8 +393,10 @@ class Decrypt extends \Com\Tecnick\Pdf\Encrypt\Compute
 
     /**
      * Recover the file encryption key using the verified user password (Algorithm 12/14).
+     *
+     * @throws \Com\Tecnick\Pdf\Encrypt\Exception
      */
-    protected function recoverKeyFromUser(string $password): void
+    protected function recoverKeyFromUser(#[\SensitiveParameter] string $password): void
     {
         $uks = \substr($this->encryptdata['U'], 40, 8);
         $hashkey = $this->hashR5R6($password, $uks);
@@ -362,8 +406,10 @@ class Decrypt extends \Com\Tecnick\Pdf\Encrypt\Compute
 
     /**
      * Recover the file encryption key using the verified owner password (Algorithm 14/16).
+     *
+     * @throws \Com\Tecnick\Pdf\Encrypt\Exception
      */
-    protected function recoverKeyFromOwner(string $password): void
+    protected function recoverKeyFromOwner(#[\SensitiveParameter] string $password): void
     {
         $oks = \substr($this->encryptdata['O'], 40, 8);
         $userHash = \substr($this->encryptdata['U'], 0, 48);
@@ -383,8 +429,10 @@ class Decrypt extends \Com\Tecnick\Pdf\Encrypt\Compute
      * @param string $userHash  48-byte U value for owner-side; empty for user-side.
      *
      * @return string 32-byte binary hash.
+     *
+     * @throws \Com\Tecnick\Pdf\Encrypt\Exception
      */
-    protected function hashR5R6(string $password, string $salt, string $userHash = ''): string
+    protected function hashR5R6(#[\SensitiveParameter] string $password, string $salt, string $userHash = ''): string
     {
         if ($this->encryptdata['mode'] === 4) {
             return $this->hash2B($password, $salt, $userHash);
@@ -403,6 +451,8 @@ class Decrypt extends \Com\Tecnick\Pdf\Encrypt\Compute
      * The ciphertext is prefixed with a 16-byte random IV as required by the
      * PDF specification (§7.6.3).  Returns an empty string when the data is
      * shorter than the IV length.
+     *
+     * @throws \Com\Tecnick\Pdf\Encrypt\Exception
      */
     protected function decryptAes(string $data, int $objnum): string
     {
@@ -413,12 +463,12 @@ class Decrypt extends \Com\Tecnick\Pdf\Encrypt\Compute
         $ivect = \substr($data, 0, AESnopad::BLOCKSIZE);
         $ciphertext = \substr($data, AESnopad::BLOCKSIZE);
         $mode = $this->encryptdata['mode'];
-        $key = ($mode < 3) ? $this->getObjectKey($objnum) : $this->encryptdata['key'];
-        $cipher = ($mode === 2) ? 'aes-128-cbc' : 'aes-256-cbc';
+        $key = $mode < 3 ? $this->getObjectKey($objnum) : $this->encryptdata['key'];
+        $cipher = $mode === 2 ? 'aes-128-cbc' : 'aes-256-cbc';
 
         $dec = \openssl_decrypt($ciphertext, $cipher, $key, OPENSSL_RAW_DATA | OPENSSL_ZERO_PADDING, $ivect);
 
-        return ($dec === false) ? '' : $dec;
+        return $dec === false ? '' : $dec;
     }
 
     // -------------------------------------------------------------------------
@@ -438,7 +488,7 @@ class Decrypt extends \Com\Tecnick\Pdf\Encrypt\Compute
      */
     protected function authenticatePublicKey(string $privkeyPath): bool
     {
-        if ($privkeyPath === '' || ! \is_readable($privkeyPath)) {
+        if ($privkeyPath === '' || !\is_readable($privkeyPath)) {
             return false;
         }
 
@@ -467,7 +517,7 @@ class Decrypt extends \Com\Tecnick\Pdf\Encrypt\Compute
         foreach ($this->encryptdata['Recipients'] as $hexRecipient) {
             // @: hex2bin emits E_WARNING for odd-length / non-hex strings; the false
             // return is handled explicitly by the guard below.
-            $derData = @\hex2bin($hexRecipient);
+            $derData = \hex2bin($hexRecipient);
             if ($derData === false) {
                 continue;
             }
@@ -496,8 +546,9 @@ class Decrypt extends \Com\Tecnick\Pdf\Encrypt\Compute
      */
     protected function tryDecryptRecipient(string $derData, string $certPem): ?string
     {
-        $smime = "MIME-Version: 1.0\r\n"
-            . "Content-Type: application/pkcs7-mime;"
+        $smime =
+            "MIME-Version: 1.0\r\n"
+            . 'Content-Type: application/pkcs7-mime;'
             . " smime-type=enveloped-data; name=\"smime.p7m\"\r\n"
             . "Content-Transfer-Encoding: base64\r\n\r\n"
             . \chunk_split(\base64_encode($derData));
@@ -514,13 +565,13 @@ class Decrypt extends \Com\Tecnick\Pdf\Encrypt\Compute
         }
 
         // phpcs:ignore Generic.PHP.NoSilencedErrors.Discouraged
-        $decOk = @\openssl_pkcs7_decrypt($tmpIn, $tmpOut, $certPem, $certPem);
+        $decOk = \openssl_pkcs7_decrypt($tmpIn, $tmpOut, $certPem, $certPem);
         $result = $decOk ? \file_get_contents($tmpOut) : null;
 
-        @\unlink($tmpIn);
-        @\unlink($tmpOut);
+        \unlink($tmpIn);
+        \unlink($tmpOut);
 
-        return ($result === false) ? null : $result;
+        return $result === false ? null : $result;
     }
 
     /**
@@ -544,17 +595,11 @@ class Decrypt extends \Com\Tecnick\Pdf\Encrypt\Compute
         }
 
         if ($this->encryptdata['mode'] >= 3) {
-            $this->encryptdata['key'] = \substr(
-                \hash('sha256', $seed . $recipientBytes, true),
-                0,
-                $keybytelen
-            );
-        } else {
-            $this->encryptdata['key'] = \substr(
-                \sha1($seed . $recipientBytes, true),
-                0,
-                $keybytelen
-            );
+            $this->encryptdata['key'] = \substr(\hash('sha256', $seed . $recipientBytes, true), 0, $keybytelen);
+
+            return;
         }
+
+        $this->encryptdata['key'] = \substr(\sha1($seed . $recipientBytes, true), 0, $keybytelen);
     }
 }

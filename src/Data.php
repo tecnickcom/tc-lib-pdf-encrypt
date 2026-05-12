@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /**
  * Encrypt.php
  *
@@ -36,10 +38,11 @@ abstract class Data extends \Com\Tecnick\Pdf\Encrypt\Output
      *
      * @var string
      */
-    protected const ENCPAD = "\x28\xBF\x4E\x5E\x4E\x75\x8A\x41\x64\x00"
-        . "\x4E\x56\xFF\xFA\x01\x08\x2E\x2E\x00\xB6"
-        . "\xD0\x68\x3E\x80\x2F\x0C\xA9\xFE\x64\x53"
-        . "\x69\x7A";
+    protected const ENCPAD =
+        "\x28\xBF\x4E\x5E\x4E\x75\x8A\x41\x64\x00"
+            . "\x4E\x56\xFF\xFA\x01\x08\x2E\x2E\x00\xB6"
+            . "\xD0\x68\x3E\x80\x2F\x0C\xA9\xFE\x64\x53"
+            . "\x69\x7A";
 
     /**
      * Map permission modes and bits.
@@ -174,19 +177,19 @@ abstract class Data extends \Com\Tecnick\Pdf\Encrypt\Output
      * @var array<int|string, string>
      */
     protected const ENCMAP = [
-        0 => 'RCFourFive',            // RC4-40
-        1 => 'RCFourSixteen',         // RC4-128
-        2 => 'AESSixteen',            // AES-128
-        3 => 'AESThirtytwo',          // AES-256 (R5)
-        4 => 'AESThirtytwo',          // AES-256 (R6)
-        'RC4' => 'RCFour',            // RC4-40
-        'RC4-40' => 'RCFourFive',     // RC4-40
+        0 => 'RCFourFive', // RC4-40
+        1 => 'RCFourSixteen', // RC4-128
+        2 => 'AESSixteen', // AES-128
+        3 => 'AESThirtytwo', // AES-256 (R5)
+        4 => 'AESThirtytwo', // AES-256 (R6)
+        'RC4' => 'RCFour', // RC4-40
+        'RC4-40' => 'RCFourFive', // RC4-40
         'RC4-128' => 'RCFourSixteen', // RC4-128
-        'AES' => 'AES',               // AES-256
-        'AES-128' => 'AESSixteen',    // AES-128
-        'AES-256' => 'AESThirtytwo',  // AES-256
-        'AESnopad' => 'AESnopad',     // AES - no padding
-        'MD5-16' => 'MDFiveSixteen',  // MD5-16
-        'seed' => 'Seed',             // Random seed string
+        'AES' => 'AES', // AES-256
+        'AES-128' => 'AESSixteen', // AES-128
+        'AES-256' => 'AESThirtytwo', // AES-256
+        'AESnopad' => 'AESnopad', // AES - no padding
+        'MD5-16' => 'MDFiveSixteen', // MD5-16
+        'seed' => 'Seed', // Random seed string
     ];
 }

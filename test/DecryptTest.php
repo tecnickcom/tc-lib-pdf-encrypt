@@ -338,15 +338,15 @@ class DecryptTest extends TestUtil
         // list contains only a string that is not valid hex (non-hex characters
         // cause hex2bin() to return false).
         $data = [
-            'V'         => 6,
-            'Length'    => 256,
-            'O'         => \str_repeat('x', 32),
-            'U'         => \str_repeat('x', 48),
-            'P'         => 0,
-            'fileid'    => \md5('test'),
-            'mode'      => 3,
-            'pubkey'    => true,
-            'Recipients' => ['ZZZZINVALID!!'],  // hex2bin returns false for non-hex chars
+            'V' => 6,
+            'Length' => 256,
+            'O' => \str_repeat('x', 32),
+            'U' => \str_repeat('x', 48),
+            'P' => 0,
+            'fileid' => \md5('test'),
+            'mode' => 3,
+            'pubkey' => true,
+            'Recipients' => ['ZZZZINVALID!!'], // hex2bin returns false for non-hex chars
         ];
         $dec = new \Com\Tecnick\Pdf\Encrypt\Decrypt($data);
         $this->assertFalse($dec->authenticate('', $certPath));
@@ -379,7 +379,7 @@ class DecryptTest extends TestUtil
 
     public function testAesnopadDecryptInvalidCipherThrows(): void
     {
-        $this->bcExpectException('\\' . \Com\Tecnick\Pdf\Encrypt\Exception::class);
+        $this->bcExpectException(\Com\Tecnick\Pdf\Encrypt\Exception::class);
         $aesnopad = new \Com\Tecnick\Pdf\Encrypt\Type\AESnopad();
         $aesnopad->decrypt('data', 'key', \Com\Tecnick\Pdf\Encrypt\Type\AESnopad::IVECT, 'des-cbc');
     }
