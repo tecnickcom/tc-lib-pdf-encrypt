@@ -153,4 +153,31 @@ class AESnopadTest extends TestUtil
         $this->bcExpectException(\Com\Tecnick\Pdf\Encrypt\Exception::class);
         $this->getTestObject()->encrypt('data', self::KEY256, AESnopad::IVECT, 'des-cbc');
     }
+
+    public function testCheckCipherUnavailable(): void
+    {
+        $missingCipher = null;
+        $available = \openssl_get_cipher_methods();
+        foreach (AESnopad::VALID_CIPHERS as $cipher) {
+            if (\in_array($cipher, $available, true)) {
+                continue;
+            }
+
+            $missingCipher = $cipher;
+            break;
+        }
+
+        if ($missingCipher === null) {
+            $this->markTestSkipped('All AESnopad valid ciphers are available on this runtime.');
+        }
+
+        $this->bcExpectException(\Com\Tecnick\Pdf\Encrypt\Exception::class);
+        $this->getTestObject()->checkCipher($missingCipher);
+    }
+
+    public function testDecryptInvalidCiphertextLength(): void
+    {
+        $this->bcExpectException(\Com\Tecnick\Pdf\Encrypt\Exception::class);
+        $this->getTestObject()->decrypt('short', self::KEY256, AESnopad::IVECT, 'aes-256-cbc');
+    }
 }

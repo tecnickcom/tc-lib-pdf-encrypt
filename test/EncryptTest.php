@@ -44,9 +44,11 @@ class EncryptTest extends TestUtil
 
     public function testEncryptException(): void
     {
-        $this->bcExpectException(\Com\Tecnick\Pdf\Encrypt\Exception::class);
-        $encrypt = new \Com\Tecnick\Pdf\Encrypt\Encrypt(true, \md5('file_id'));
-        $encrypt->encrypt('WRONG');
+        $this->bcRunIgnoringUserDeprecations(function (): void {
+            $this->bcExpectException(\Com\Tecnick\Pdf\Encrypt\Exception::class);
+            $encrypt = new \Com\Tecnick\Pdf\Encrypt\Encrypt(true, \md5('file_id'));
+            $encrypt->encrypt('WRONG');
+        });
     }
 
     public function testEncryptModeException(): void
@@ -60,6 +62,13 @@ class EncryptTest extends TestUtil
         $encrypt = new \Com\Tecnick\Pdf\Encrypt\Encrypt(true, \md5('file_id'), 3, ['print'], 'alpha', 'beta');
         $result = $encrypt->encrypt(3, 'alpha');
         $this->assertEquals(32, \strlen($result));
+    }
+
+    public function testEncryptWithAesEncoderName(): void
+    {
+        $encrypt = new \Com\Tecnick\Pdf\Encrypt\Encrypt(true, \md5('file_id'), 3, ['print'], 'alpha', 'beta');
+        $result = $encrypt->encrypt('AES', 'alpha', '0123456789abcdef0123456789abcdef');
+        $this->assertGreaterThan(16, \strlen($result));
     }
 
     public function testEncryptPubThree(): void
@@ -93,18 +102,53 @@ class EncryptTest extends TestUtil
         ]]);
     }
 
+    public function testEncryptPubUnreadableCertificateException(): void
+    {
+        $this->bcExpectException(\Com\Tecnick\Pdf\Encrypt\Exception::class);
+
+        \set_error_handler(static fn(): bool => true);
+        try {
+            new \Com\Tecnick\Pdf\Encrypt\Encrypt(true, \md5('file_id'), 3, ['print'], 'alpha', 'beta', [[
+                'c' => __DIR__ . '/data/does-not-exist.pem',
+                'p' => ['print'],
+            ]]);
+        } finally {
+            \restore_error_handler();
+        }
+    }
+
+    public function testEncryptRc4ThroughOpenSslWhenAvailable(): void
+    {
+        if (!\in_array('RC4', \openssl_get_cipher_methods(), true)) {
+            $this->markTestSkipped('OpenSSL RC4 cipher is not available on this runtime.');
+        }
+
+        $encrypt = new \Com\Tecnick\Pdf\Encrypt\Encrypt(true, \md5('file_id'), 3, ['print'], 'alpha', 'beta');
+        $result = $encrypt->encrypt('RC4', 'alpha', '0123456789abcdef');
+        $this->assertSame(5, \strlen($result));
+    }
+
     public function testEncryptModZeroPub(): void
     {
-        \error_reporting(E_ALL); // DEBUG
-        $pubkeys = [[
-            'c' => __DIR__ . '/data/cert.pem',
-            'p' => ['print'],
-        ]];
-        $encrypt = new \Com\Tecnick\Pdf\Encrypt\Encrypt(true, \md5('file_id'), 0, ['print'], 'alpha', 'beta', $pubkeys);
-        $result = $encrypt->encrypt(1, 'alpha');
-        // Check for "error:0308010C:digital envelope routines::unsupported" when using OpenSSL 3.
-        // \var_dump(\openssl_error_string());
-        $this->assertEquals(5, \strlen($result));
+        $this->bcRunIgnoringUserDeprecations(function (): void {
+            $pubkeys = [[
+                'c' => __DIR__ . '/data/cert.pem',
+                'p' => ['print'],
+            ]];
+            $encrypt = new \Com\Tecnick\Pdf\Encrypt\Encrypt(
+                true,
+                \md5('file_id'),
+                0,
+                ['print'],
+                'alpha',
+                'beta',
+                $pubkeys,
+            );
+            $result = $encrypt->encrypt(1, 'alpha');
+            // Check for "error:0308010C:digital envelope routines::unsupported" when using OpenSSL 3.
+            // \var_dump(\openssl_error_string());
+            $this->assertEquals(5, \strlen($result));
+        });
     }
 
     /** Issue 6: RC4 mode 0 must emit a deprecation notice. */
@@ -221,13 +265,15 @@ class EncryptTest extends TestUtil
 
     public function testGetEncryptionData(): void
     {
-        $permissions = ['print'];
-        $encrypt = new \Com\Tecnick\Pdf\Encrypt\Encrypt(true, \md5('file_id'), 0, $permissions, 'alpha', 'beta');
-        $result = $encrypt->getEncryptionData();
-        $this->assertEquals(2_147_422_008, $result['protection']);
-        $this->assertEquals(1, $result['V']);
-        $this->assertEquals(40, $result['Length']);
-        $this->assertEquals('V2', $result['CF']['CFM']);
+        $this->bcRunIgnoringUserDeprecations(function (): void {
+            $permissions = ['print'];
+            $encrypt = new \Com\Tecnick\Pdf\Encrypt\Encrypt(true, \md5('file_id'), 0, $permissions, 'alpha', 'beta');
+            $result = $encrypt->getEncryptionData();
+            $this->assertEquals(2_147_422_008, $result['protection']);
+            $this->assertEquals(1, $result['V']);
+            $this->assertEquals(40, $result['Length']);
+            $this->assertEquals('V2', $result['CF']['CFM']);
+        });
     }
 
     public function testGetObjectKey(): void
@@ -334,15 +380,26 @@ class EncryptTest extends TestUtil
 
     public function testEncryptStringEnabled(): void
     {
-        $permissions = ['print', 'modify', 'copy', 'annot-forms', 'fill-forms', 'extract', 'assemble', 'print-high'];
+        $this->bcRunIgnoringUserDeprecations(function (): void {
+            $permissions = [
+                'print',
+                'modify',
+                'copy',
+                'annot-forms',
+                'fill-forms',
+                'extract',
+                'assemble',
+                'print-high',
+            ];
 
-        $enc = new \Com\Tecnick\Pdf\Encrypt\Encrypt(true, \md5('file_id'), 0, $permissions, 'alpha');
-        $result = $enc->encryptString('(hello world) slash \\' . \chr(13));
-        $this->assertEquals('728cc693be1e4c1fb6b7e7b2a34644ad', \md5($result));
+            $enc = new \Com\Tecnick\Pdf\Encrypt\Encrypt(true, \md5('file_id'), 0, $permissions, 'alpha');
+            $result = $enc->encryptString('(hello world) slash \\' . \chr(13));
+            $this->assertEquals('728cc693be1e4c1fb6b7e7b2a34644ad', \md5($result));
 
-        $enc = new \Com\Tecnick\Pdf\Encrypt\Encrypt(true, \md5('file_id'), 1, $permissions, 'alpha', 'beta');
-        $result = $enc->encryptString('(hello world) slash \\' . \chr(13));
-        $this->assertEquals('258ad774ddeec21b3b439a720df18e0d', \md5($result));
+            $enc = new \Com\Tecnick\Pdf\Encrypt\Encrypt(true, \md5('file_id'), 1, $permissions, 'alpha', 'beta');
+            $result = $enc->encryptString('(hello world) slash \\' . \chr(13));
+            $this->assertEquals('258ad774ddeec21b3b439a720df18e0d', \md5($result));
+        });
     }
 
     public function testEscapeDataStringDisabled(): void
@@ -361,15 +418,26 @@ class EncryptTest extends TestUtil
 
     public function testEscapeDataStringEnabled(): void
     {
-        $permissions = ['print', 'modify', 'copy', 'annot-forms', 'fill-forms', 'extract', 'assemble', 'print-high'];
+        $this->bcRunIgnoringUserDeprecations(function (): void {
+            $permissions = [
+                'print',
+                'modify',
+                'copy',
+                'annot-forms',
+                'fill-forms',
+                'extract',
+                'assemble',
+                'print-high',
+            ];
 
-        $enc = new \Com\Tecnick\Pdf\Encrypt\Encrypt(true, \md5('file_id'), 0, $permissions, 'alpha');
-        $result = $enc->escapeDataString('(hello world) slash \\' . \chr(13));
-        $this->assertEquals('24f60765c1c07a44fc3c9b44d2f55dbc', \md5($result));
+            $enc = new \Com\Tecnick\Pdf\Encrypt\Encrypt(true, \md5('file_id'), 0, $permissions, 'alpha');
+            $result = $enc->escapeDataString('(hello world) slash \\' . \chr(13));
+            $this->assertEquals('24f60765c1c07a44fc3c9b44d2f55dbc', \md5($result));
 
-        $enc = new \Com\Tecnick\Pdf\Encrypt\Encrypt(true, \md5('file_id'), 1, $permissions, 'alpha', 'beta');
-        $result = $enc->escapeDataString('(hello world) slash \\' . \chr(13));
-        $this->assertEquals('ebc28272f4aff661fa0b7764d791fb79', \md5($result));
+            $enc = new \Com\Tecnick\Pdf\Encrypt\Encrypt(true, \md5('file_id'), 1, $permissions, 'alpha', 'beta');
+            $result = $enc->escapeDataString('(hello world) slash \\' . \chr(13));
+            $this->assertEquals('ebc28272f4aff661fa0b7764d791fb79', \md5($result));
+        });
     }
 
     public function testGetFormattedDate(): void
@@ -381,8 +449,10 @@ class EncryptTest extends TestUtil
         $this->assertEquals('(D:', \substr($result, 0, 3));
         $this->assertEquals("+00'00')", \substr($result, -8));
 
-        $enc = new \Com\Tecnick\Pdf\Encrypt\Encrypt(true, \md5('file_id'), 0, $permissions, 'alpha');
-        $result = $enc->getFormattedDate();
-        $this->assertNotEmpty($result);
+        $this->bcRunIgnoringUserDeprecations(function () use ($permissions): void {
+            $enc = new \Com\Tecnick\Pdf\Encrypt\Encrypt(true, \md5('file_id'), 0, $permissions, 'alpha');
+            $result = $enc->getFormattedDate();
+            $this->assertNotEmpty($result);
+        });
     }
 }

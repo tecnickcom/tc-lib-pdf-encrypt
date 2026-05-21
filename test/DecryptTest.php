@@ -296,13 +296,15 @@ class DecryptTest extends TestUtil
 
     public function testAuthenticatePublicKeyMode1(): void
     {
-        // Mode 1 pubkey silently promotes mode 0 → 1 (covered elsewhere).
-        $certPath = __DIR__ . '/data/cert.pem';
-        $pubkeys = [['c' => $certPath, 'p' => ['print']]];
-        $enc = new Encrypt(true, \md5('file'), 1, ['print'], '', '', $pubkeys);
-        $dec = $this->decryptFromEncrypt($enc);
-        $this->assertTrue($dec->authenticate('', $certPath));
-        $this->assertNotEmpty($dec->getDocumentKey());
+        $this->bcRunIgnoringUserDeprecations(function (): void {
+            // Mode 1 pubkey silently promotes mode 0 → 1 (covered elsewhere).
+            $certPath = __DIR__ . '/data/cert.pem';
+            $pubkeys = [['c' => $certPath, 'p' => ['print']]];
+            $enc = new Encrypt(true, \md5('file'), 1, ['print'], '', '', $pubkeys);
+            $dec = $this->decryptFromEncrypt($enc);
+            $this->assertTrue($dec->authenticate('', $certPath));
+            $this->assertNotEmpty($dec->getDocumentKey());
+        });
     }
 
     public function testAuthenticatePublicKeyEmptyPathReturnsFalse(): void

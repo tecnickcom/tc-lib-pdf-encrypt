@@ -515,9 +515,15 @@ class Decrypt extends \Com\Tecnick\Pdf\Encrypt\Compute
     protected function findDecryptedRecipientSeed(string $certPem): ?string
     {
         foreach ($this->encryptdata['Recipients'] as $hexRecipient) {
-            // @: hex2bin emits E_WARNING for odd-length / non-hex strings; the false
-            // return is handled explicitly by the guard below.
-            $derData = \hex2bin($hexRecipient);
+            // Silence native warning noise for malformed recipient entries;
+            // false is handled explicitly by the guard below.
+            \set_error_handler(static fn(): bool => true);
+            try {
+                $derData = \hex2bin($hexRecipient);
+            } finally {
+                \restore_error_handler();
+            }
+
             if ($derData === false) {
                 continue;
             }
@@ -564,8 +570,13 @@ class Decrypt extends \Com\Tecnick\Pdf\Encrypt\Compute
             return null;
         }
 
-        // phpcs:ignore Generic.PHP.NoSilencedErrors.Discouraged
-        $decOk = \openssl_pkcs7_decrypt($tmpIn, $tmpOut, $certPem, $certPem);
+        \set_error_handler(static fn(): bool => true);
+        try {
+            $decOk = \openssl_pkcs7_decrypt($tmpIn, $tmpOut, $certPem, $certPem);
+        } finally {
+            \restore_error_handler();
+        }
+
         $result = $decOk ? \file_get_contents($tmpOut) : null;
 
         \unlink($tmpIn);

@@ -98,12 +98,12 @@ require_once __DIR__ . '/vendor/autoload.php';
 
 // AES-256 R6 (mode 4 — recommended)
 $encrypt = new \Com\Tecnick\Pdf\Encrypt\Encrypt(
-    true,             // enabled
-    md5('unique-file-id'),
-    4,                // mode: AES-256 R6 / PDF 2.0
-    ['print', 'copy'],
-    'userpassword',
-    'ownerpassword'
+    enabled: true,
+    file_id: md5('unique-file-id'),
+    mode: 4,
+    permissions: ['print', 'copy'],
+    user_pass: 'userpassword',
+    owner_pass: 'ownerpassword',
 );
 
 $cipher = $encrypt->encryptString('secret payload', $objectNumber = 1);
@@ -163,8 +163,3 @@ require_once '/usr/share/php/Com/Tecnick/Pdf/Encrypt/autoload.php';
 
 Contributions are welcome. Please review [CONTRIBUTING.md](CONTRIBUTING.md), [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md), and [SECURITY.md](SECURITY.md).
 
----
-
-## Contact
-
-Nicola Asuni - <info@tecnick.com>

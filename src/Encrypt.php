@@ -204,7 +204,9 @@ class Encrypt extends \Com\Tecnick\Pdf\Encrypt\Compute
             'AuthEvent' => $settings['CF']['AuthEvent'],
             'EncryptMetadata' => $this->encryptdata['EncryptMetadata'],
         ];
-        $this->encryptdata['SubFilter'] = $settings['SubFilter'];
+        // SubFilter values from ENCRYPT_SETTINGS are for public-key handlers.
+        // Standard password encryption must omit SubFilter.
+        $this->encryptdata['SubFilter'] = $this->encryptdata['pubkey'] ? $settings['SubFilter'] : '';
         $this->encryptdata['Recipients'] = $settings['Recipients'];
 
         // Keep SubFilter and Recipients keys set from ENCRYPT_SETTINGS to preserve

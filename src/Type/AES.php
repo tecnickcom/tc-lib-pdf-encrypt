@@ -61,6 +61,12 @@ class AES
         }
 
         $ivect = \openssl_random_pseudo_bytes($len);
-        return $ivect . $aesnopad->encrypt($data, $key, $ivect, $mode);
+        $enc = \openssl_encrypt($data, $mode, $key, OPENSSL_RAW_DATA, $ivect);
+
+        if ($enc === false) {
+            throw new EncException('encryption error: ' . (string) \openssl_error_string());
+        }
+
+        return $ivect . $enc;
     }
 }

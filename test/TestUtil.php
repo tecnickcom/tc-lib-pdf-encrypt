@@ -75,4 +75,22 @@ class TestUtil extends TestCase
             'User deprecation message did not match pattern ' . $pattern . '. Got: ' . \implode(' | ', $messages),
         );
     }
+
+    /**
+     * Execute a callback while swallowing user deprecations.
+     *
+     * @template T
+     * @param callable():T $callback
+     * @return T
+     */
+    public function bcRunIgnoringUserDeprecations(callable $callback): mixed
+    {
+        \set_error_handler(static fn(int $errno): bool => $errno === E_USER_DEPRECATED);
+
+        try {
+            return $callback();
+        } finally {
+            \restore_error_handler();
+        }
+    }
 }

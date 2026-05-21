@@ -65,8 +65,8 @@ class AESTest extends TestUtil
     }
 
     /**
-     * AES::encrypt() output = 16-byte IV + padded ciphertext.
-     * padded_len = ceil(n/16)*16 when n%16 != 0, else n.
+     * AES::encrypt() output = 16-byte IV + PKCS#7-padded ciphertext.
+     * padded_len = ceil((n + 1)/16) * 16, so aligned input gets one full block.
      * Total = padded_len + 16.
      *
      * With the old truncation bug, pad() always produced 16 bytes, so every
@@ -82,9 +82,9 @@ class AESTest extends TestUtil
         $enc17 = $aes->encrypt(\str_repeat('x', 17), $key, 'aes-128-cbc');
         $this->assertSame(48, \strlen($enc17));
 
-        // 32 bytes → padded to 32 (already multiple) → 32 + 16 = 48
+        // 32 bytes → padded to 48 (full PKCS#7 block) → 48 + 16 = 64
         $enc32 = $aes->encrypt(\str_repeat('x', 32), $key, 'aes-128-cbc');
-        $this->assertSame(48, \strlen($enc32));
+        $this->assertSame(64, \strlen($enc32));
 
         // 33 bytes → padded to 48 → 48 + 16 = 64
         $enc33 = $aes->encrypt(\str_repeat('x', 33), $key, 'aes-128-cbc');
@@ -104,9 +104,9 @@ class AESTest extends TestUtil
         $enc17 = $aes->encrypt(\str_repeat('x', 17), $key, 'aes-256-cbc');
         $this->assertSame(48, \strlen($enc17));
 
-        // 32 bytes → padded to 32 (already multiple) → 32 + 16 = 48
+        // 32 bytes → padded to 48 (full PKCS#7 block) → 48 + 16 = 64
         $enc32 = $aes->encrypt(\str_repeat('x', 32), $key, 'aes-256-cbc');
-        $this->assertSame(48, \strlen($enc32));
+        $this->assertSame(64, \strlen($enc32));
 
         // 100 bytes → padded to 112 → 112 + 16 = 128
         $enc100 = $aes->encrypt(\str_repeat('x', 100), $key, 'aes-256-cbc');
