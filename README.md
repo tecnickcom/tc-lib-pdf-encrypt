@@ -121,10 +121,10 @@ require_once __DIR__ . '/vendor/autoload.php';
 $decrypt = new \Com\Tecnick\Pdf\Encrypt\Decrypt($encrypt->getEncryptionData());
 
 if ($decrypt->authenticate('userpassword')) {
+    // For AES modes the PKCS#7 padding is stripped automatically, so the
+    // exact original plaintext is returned. RC4 modes are symmetric.
     $plain = $decrypt->decryptString($cipher, $objectNumber = 1);
-    // For AES modes the output is zero-padded to the block size;
-    // trim trailing null bytes when the original was not block-aligned.
-    echo rtrim($plain, "\x00");
+    echo $plain;
 }
 ```
 

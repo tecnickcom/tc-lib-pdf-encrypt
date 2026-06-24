@@ -48,7 +48,8 @@ class Encrypt extends \Com\Tecnick\Pdf\Encrypt\Compute
      *
      * @param bool   $enabled     False if the encryption is disabled (i.e. the document is in PDF/A mode)
      * @param string $file_id     File ID
-     * @param int    $mode        Encryption strength: 0 = RC4 40; 1 = RC4 128; 2 = AES 128; 3 = AES 256
+     * @param int    $mode        Encryption strength: 0 = RC4-40 (deprecated); 1 = RC4-128 (deprecated);
+     *                            2 = AES-128; 3 = AES-256 R5; 4 = AES-256 R6 (PDF 2.0 / ISO 32000-2)
      * @param array<string>  $permissions The set of permissions (specify the ones you want to block):
      *                'owner' // When set permits change of encryption and enables all other permissions.
      *                // (inverted logic: cleared by default).

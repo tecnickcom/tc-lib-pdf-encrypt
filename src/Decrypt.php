@@ -145,10 +145,9 @@ class Decrypt extends \Com\Tecnick\Pdf\Encrypt\Compute
      *
      * For RC4 modes (0, 1) the operation is symmetric — the same method that
      * encrypts also decrypts.  For AES modes (2, 3, 4) the first 16 bytes of
-     * $data are the random IV; the remainder is the ciphertext.  The returned
-     * string may have trailing zero bytes when the original plaintext was not a
-     * multiple of 16 bytes (a consequence of the zero-padding used during
-     * encryption).
+     * $data are the random IV; the remainder is the ciphertext.  The PKCS#7
+     * padding applied during encryption is stripped, so the exact original
+     * plaintext is returned.
      *
      * @param string $data   Encrypted string/stream data.
      * @param int    $objnum PDF object number (used for per-object key derivation
@@ -221,7 +220,7 @@ class Decrypt extends \Com\Tecnick\Pdf\Encrypt\Compute
         $savedKey = $this->encryptdata['key'];
         $this->encryptdata['key'] = $this->deriveKeyR24($paddedPass);
 
-        $computedU = $this->getUvalue();
+        $computedU = $this->getUValue();
 
         if ($this->compareUserHashR24($computedU)) {
             return true;
@@ -452,6 +451,12 @@ class Decrypt extends \Com\Tecnick\Pdf\Encrypt\Compute
      * PDF specification (§7.6.3).  Returns an empty string when the data is
      * shorter than the IV length.
      *
+     * The string/stream ciphertext is produced with PKCS#7 block padding
+     * (AESV2/AESV3 crypt filters, ISO 32000), so decryption is performed
+     * WITHOUT OPENSSL_ZERO_PADDING: OpenSSL validates and strips the PKCS#7
+     * padding, recovering the exact original plaintext.  Returns an empty
+     * string when the padding is invalid (e.g. wrong key or corrupted data).
+     *
      * @throws \Com\Tecnick\Pdf\Encrypt\Exception
      */
     protected function decryptAes(string $data, int $objnum): string
@@ -466,7 +471,7 @@ class Decrypt extends \Com\Tecnick\Pdf\Encrypt\Compute
         $key = $mode < 3 ? $this->getObjectKey($objnum) : $this->encryptdata['key'];
         $cipher = $mode === 2 ? 'aes-128-cbc' : 'aes-256-cbc';
 
-        $dec = \openssl_decrypt($ciphertext, $cipher, $key, OPENSSL_RAW_DATA | OPENSSL_ZERO_PADDING, $ivect);
+        $dec = \openssl_decrypt($ciphertext, $cipher, $key, OPENSSL_RAW_DATA, $ivect);
 
         return $dec === false ? '' : $dec;
     }

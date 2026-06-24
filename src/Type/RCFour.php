@@ -65,7 +65,7 @@ class RCFour
         }
 
         if (!\in_array($mode, self::VALID_CIPHERS, strict: true)) {
-            throw new EncException('invalid chipher: ' . $mode);
+            throw new EncException('invalid cipher: ' . $mode);
         }
 
         if (!\in_array($mode, \openssl_get_cipher_methods(), strict: true)) {
@@ -100,7 +100,7 @@ class RCFour
      */
     protected function initRc4State(string $key): array
     {
-        $pkey = \str_repeat($key, (int) ((256 / \strlen($key)) + 1));
+        $pkey = \str_repeat($key, \max(1, (int) ((256 / \strlen($key)) + 1)));
         /** @var array<int, int> $rc4 */
         $rc4 = \range(0, 255);
         $pos = 0;

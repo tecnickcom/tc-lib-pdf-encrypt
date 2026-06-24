@@ -34,9 +34,11 @@ class EncryptTest extends TestUtil
     //   openssl_encrypt() never returns false for valid block-aligned AES-128-CBC inputs with
     //   a correct 16-byte key and IV — this branch is unreachable under normal PHP/OpenSSL conditions.
     //
-    // Coverage note: src/Compute.php generatePublicEncryptionKey() line ~429
-    //   `if ($tempencfile === false) throw` guards against tempnam() returning false, which
-    //   requires a filesystem failure that cannot be reliably induced in unit tests.
+    // Coverage note: src/Compute.php getEncryptedRecipientBytes()
+    //   The `tempnam() === false` / `file_put_contents() === false` guards (and the
+    //   accompanying unlink() cleanup on those error paths) require a filesystem failure
+    //   that cannot be reliably induced in unit tests. The happy-path try/finally cleanup
+    //   and encryptRecipientEnvelope() are exercised by the public-key tests.
     //
     // Coverage note: src/Encrypt.php convertStringToHexString() line ~246
     //   `return ''` after `preg_split('//', ...)` guards against the impossible case where

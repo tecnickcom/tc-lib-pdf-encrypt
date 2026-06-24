@@ -21,7 +21,7 @@ namespace Com\Tecnick\Pdf\Encrypt;
 /**
  * Com\Tecnick\Pdf\Encrypt\Data
  *
- * Ecrypt common data
+ * Encrypt common data
  *
  * @since     2008-01-02
  * @category  Library

@@ -149,7 +149,7 @@ class AESnopad
     {
         $rem = \strlen($data) % $length;
         if ($rem !== 0) {
-            $data .= \str_repeat("\x00", $length - $rem);
+            $data .= \str_repeat("\x00", \max(0, $length - $rem));
         }
 
         return $data;
@@ -165,11 +165,11 @@ class AESnopad
     public function checkCipher(string $cipher): void
     {
         if (!\in_array($cipher, self::VALID_CIPHERS, strict: true)) {
-            throw new EncException('invalid chipher: ' . $cipher);
+            throw new EncException('invalid cipher: ' . $cipher);
         }
 
         if (!\in_array($cipher, \openssl_get_cipher_methods(), strict: true)) {
-            throw new EncException('unavailable chipher: ' . $cipher);
+            throw new EncException('unavailable cipher: ' . $cipher);
         }
     }
 }

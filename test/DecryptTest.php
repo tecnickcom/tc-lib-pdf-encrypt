@@ -198,7 +198,8 @@ class DecryptTest extends TestUtil
     }
 
     /**
-     * AES-128: IV-prefixed stream; decrypted output is zero-padded to block size.
+     * AES-128: IV-prefixed stream; PKCS#7 padding is stripped so the exact
+     * plaintext is recovered.
      */
     public function testDecryptStringRoundtripMode2(): void
     {
@@ -207,12 +208,11 @@ class DecryptTest extends TestUtil
         $ciphertext = $enc->encryptString($plaintext, 1);
         $dec = $this->decryptFromEncrypt($enc);
         $this->assertTrue($dec->authenticate('alpha'));
-        $result = $dec->decryptString($ciphertext, 1);
-        $this->assertStringStartsWith($plaintext, $result);
+        $this->assertSame($plaintext, $dec->decryptString($ciphertext, 1));
     }
 
     /**
-     * AES-256 R5: full document key used; decrypted prefix matches original.
+     * AES-256 R5: full document key used; exact plaintext recovered.
      */
     public function testDecryptStringRoundtripMode3(): void
     {
@@ -221,8 +221,7 @@ class DecryptTest extends TestUtil
         $ciphertext = $enc->encryptString($plaintext, 1);
         $dec = $this->decryptFromEncrypt($enc);
         $this->assertTrue($dec->authenticate('alpha'));
-        $result = $dec->decryptString($ciphertext, 1);
-        $this->assertStringStartsWith($plaintext, $result);
+        $this->assertSame($plaintext, $dec->decryptString($ciphertext, 1));
     }
 
     /**
@@ -235,8 +234,38 @@ class DecryptTest extends TestUtil
         $ciphertext = $enc->encryptString($plaintext, 1);
         $dec = $this->decryptFromEncrypt($enc);
         $this->assertTrue($dec->authenticate('alpha'));
-        $result = $dec->decryptString($ciphertext, 1);
-        $this->assertStringStartsWith($plaintext, $result);
+        $this->assertSame($plaintext, $dec->decryptString($ciphertext, 1));
+    }
+
+    /**
+     * Block-aligned plaintext (exactly 16 bytes) must round-trip exactly: the
+     * PKCS#7 scheme appends a full extra padding block on encryption that must
+     * be removed on decryption.
+     */
+    public function testDecryptStringRoundtripBlockAligned(): void
+    {
+        foreach ([2, 3, 4] as $mode) {
+            $enc = new Encrypt(true, \md5('file'), $mode, ['print'], 'alpha', 'beta');
+            $plaintext = \str_repeat('A', 16);
+            $ciphertext = $enc->encryptString($plaintext, 7);
+            $dec = $this->decryptFromEncrypt($enc);
+            $this->assertTrue($dec->authenticate('alpha'));
+            $this->assertSame($plaintext, $dec->decryptString($ciphertext, 7), "mode {$mode}");
+        }
+    }
+
+    /**
+     * Empty plaintext must round-trip to an empty string for all AES modes.
+     */
+    public function testDecryptStringRoundtripEmpty(): void
+    {
+        foreach ([2, 3, 4] as $mode) {
+            $enc = new Encrypt(true, \md5('file'), $mode, ['print'], 'alpha', 'beta');
+            $ciphertext = $enc->encryptString('', 3);
+            $dec = $this->decryptFromEncrypt($enc);
+            $this->assertTrue($dec->authenticate('alpha'));
+            $this->assertSame('', $dec->decryptString($ciphertext, 3), "mode {$mode}");
+        }
     }
 
     /**

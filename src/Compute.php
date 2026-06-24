@@ -219,7 +219,8 @@ abstract class Compute extends \Com\Tecnick\Pdf\Encrypt\Data
      * Return the permission code used on encryption (P value).
      *
      * @param array<string> $permissions The set of permissions (specify the ones you want to block).
-     * @param int   $mode        Encryption strength: 0 = RC4 40 bit; 1 = RC4 128 bit; 2 = AES 128 bit; 3 = AES 256 bit.
+     * @param int   $mode        Encryption strength: 0 = RC4-40 (deprecated); 1 = RC4-128 (deprecated);
+     *                           2 = AES-128; 3 = AES-256 R5; 4 = AES-256 R6 (PDF 2.0 / ISO 32000-2).
      */
     public function getUserPermissionCode(array $permissions, int $mode = 0): int
     {
@@ -300,7 +301,7 @@ abstract class Compute extends \Com\Tecnick\Pdf\Encrypt\Data
      *
      * @throws \Com\Tecnick\Pdf\Encrypt\Exception
      */
-    protected function getUvalue(): string
+    protected function getUValue(): string
     {
         if ($this->encryptdata['mode'] === 0) { // RC4-40
             return $this->encrypt('RC4', self::ENCPAD, $this->encryptdata['key']);
@@ -324,16 +325,7 @@ abstract class Compute extends \Com\Tecnick\Pdf\Encrypt\Data
         }
 
         // AES-256 ($this->encryptdata['mode'] >= 3)
-        $seed = $this->encrypt('MD5-16', $this->encrypt('seed'), 'H*');
-        // User Validation Salt
-        $this->encryptdata['UVS'] = \substr($seed, 0, 8);
-        // User Key Salt
-        $this->encryptdata['UKS'] = \substr($seed, 8, 16);
-        $uHash = $this->encryptdata['mode'] === 4
-            ? $this->hash2B($this->encryptdata['user_password'], $this->encryptdata['UVS']) // R6: Algorithm 2.B
-            : \hash('sha256', $this->encryptdata['user_password'] . $this->encryptdata['UVS'], true); // R5: simple SHA-256
-
-        return $uHash . $this->encryptdata['UVS'] . $this->encryptdata['UKS'];
+        return $this->getUValueAes256();
     }
 
     /**
@@ -369,18 +361,53 @@ abstract class Compute extends \Com\Tecnick\Pdf\Encrypt\Data
         }
 
         // AES-256 ($this->encryptdata['mode'] >= 3)
+        return $this->getOValueAes256();
+    }
+
+    /**
+     * Generate a fresh 8-byte validation salt and 8-byte key salt for AES-256
+     * (R5/R6) password hashing (ISO 32000 Algorithm 8/9).
+     *
+     * @return array{0: string, 1: string} [validationSalt, keySalt]
+     *
+     * @throws \Com\Tecnick\Pdf\Encrypt\Exception
+     */
+    protected function generateAes256Salts(): array
+    {
         $seed = $this->encrypt('MD5-16', $this->encrypt('seed'), 'H*');
-        // Owner Validation Salt
-        $this->encryptdata['OVS'] = \substr($seed, 0, 8);
-        // Owner Key Salt
-        $this->encryptdata['OKS'] = \substr($seed, 8, 16);
+        return [\substr($seed, 0, 8), \substr($seed, 8, 8)];
+    }
+
+    /**
+     * Compute the U value for AES-256 (R5/R6).
+     *
+     * @throws \Com\Tecnick\Pdf\Encrypt\Exception
+     */
+    protected function getUValueAes256(): string
+    {
+        [$this->encryptdata['UVS'], $this->encryptdata['UKS']] = $this->generateAes256Salts();
+        $uHash = $this->encryptdata['mode'] === 4
+            ? $this->hash2B($this->encryptdata['user_password'], $this->encryptdata['UVS']) // R6: Algorithm 2.B
+            : \hash('sha256', $this->encryptdata['user_password'] . $this->encryptdata['UVS'], true); // R5: SHA-256
+
+        return $uHash . $this->encryptdata['UVS'] . $this->encryptdata['UKS'];
+    }
+
+    /**
+     * Compute the O value for AES-256 (R5/R6).
+     *
+     * @throws \Com\Tecnick\Pdf\Encrypt\Exception
+     */
+    protected function getOValueAes256(): string
+    {
+        [$this->encryptdata['OVS'], $this->encryptdata['OKS']] = $this->generateAes256Salts();
         $oHash = $this->encryptdata['mode'] === 4
-            ? $this->hash2B($this->encryptdata['owner_password'], $this->encryptdata['OVS'], $this->encryptdata['U']) // R6: Algorithm 2.B
+            ? $this->hash2B($this->encryptdata['owner_password'], $this->encryptdata['OVS'], $this->encryptdata['U']) // R6
             : \hash(
                 'sha256',
                 $this->encryptdata['owner_password'] . $this->encryptdata['OVS'] . $this->encryptdata['U'],
                 true,
-            ); // R5: simple SHA-256
+            ); // R5: SHA-256
 
         return $oHash . $this->encryptdata['OVS'] . $this->encryptdata['OKS'];
     }
@@ -575,6 +602,7 @@ abstract class Compute extends \Com\Tecnick\Pdf\Encrypt\Data
         }
 
         if (\file_put_contents($tempkeyfile, $envelope) === false) {
+            \unlink($tempkeyfile);
             throw new EncException('Unable to create temporary key file: ' . $tempkeyfile);
         }
 
@@ -583,9 +611,33 @@ abstract class Compute extends \Com\Tecnick\Pdf\Encrypt\Data
             '__tcpdf_enc_' . \md5($this->encryptdata['fileid'] . $envelope) . '_',
         );
         if ($tempencfile === false) {
+            // The key file was already created; remove it before bailing out.
+            \unlink($tempkeyfile);
             throw new EncException('Unable to generate temporary key file name');
         }
 
+        try {
+            return $this->encryptRecipientEnvelope($pubkey, $tempkeyfile, $tempencfile);
+        } finally {
+            // Always remove the temporary files: $tempkeyfile holds the plaintext
+            // envelope (sensitive key material) and must never be left behind.
+            \unlink($tempkeyfile);
+            \unlink($tempencfile);
+        }
+    }
+
+    /**
+     * Encrypt the envelope file to the recipient's certificate and extract the
+     * resulting PKCS#7 signature bytes.
+     *
+     * @param array{c:string,p:array<string>} $pubkey       Recipient certificate/permissions.
+     * @param string                          $tempkeyfile  Path to the plaintext envelope file.
+     * @param string                          $tempencfile  Path to the PKCS#7 output file.
+     *
+     * @throws \Com\Tecnick\Pdf\Encrypt\Exception
+     */
+    protected function encryptRecipientEnvelope(array $pubkey, string $tempkeyfile, string $tempencfile): string
+    {
         if (!\function_exists('openssl_pkcs7_encrypt')) {
             throw new EncException(
                 'Unable to encrypt the file: '
