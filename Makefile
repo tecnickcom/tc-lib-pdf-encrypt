@@ -97,6 +97,9 @@ ifeq ($(OPENSSL_CONF),)
 	OPENSSL_CONF=$(CURRENTDIR)openssl.cnf
 endif
 
+# Mago version
+MAGOVERSION=1.40.2
+
 # --- MAKE TARGETS ---
 
 # Display general help about this command
@@ -168,7 +171,7 @@ endif
 deps: ensuretarget
 	rm -rf ./vendor/*
 	($(COMPOSER) install -vvv --no-interaction)
-	curl --proto '=https' --tlsv1.2 --silent --show-error --fail --location https://carthage.software/mago.sh | bash -s -- --install-dir=./vendor/bin
+	curl --proto '=https' --tlsv1.2 --silent --show-error --fail --location https://carthage.software/mago.sh | bash -s -- --install-dir=./vendor/bin --version=$(MAGOVERSION)
 
 ## Generate source code documentation
 .PHONY: doc
