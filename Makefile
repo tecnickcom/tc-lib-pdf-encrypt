@@ -98,7 +98,7 @@ ifeq ($(OPENSSL_CONF),)
 endif
 
 # Mago version
-MAGOVERSION=1.42.0
+MAGOVERSION=1.43.0
 
 # --- MAKE TARGETS ---
 

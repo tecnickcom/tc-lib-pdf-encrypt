@@ -74,7 +74,7 @@ The package encapsulates PDF security mechanics behind a focused API so consumin
 ## Requirements
 
 - PHP 8.2 or later
-- Extensions: `date`, `hash`, `openssl`, `pcre`
+- Extensions: `hash`, `openssl`
 - Composer
 
 ---

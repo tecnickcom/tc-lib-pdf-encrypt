@@ -27,10 +27,8 @@
     ],
     "require": {
         "php": ">=8.2",
-        "ext-date": "*",
         "ext-hash": "*",
-        "ext-openssl": "*",
-        "ext-pcre": "*"
+        "ext-openssl": "*"
     },
     "suggest": {
         "ext-posix": "*"
