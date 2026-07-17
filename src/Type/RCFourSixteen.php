@@ -21,7 +21,7 @@ namespace Com\Tecnick\Pdf\Encrypt\Type;
 /**
  * Com\Tecnick\Pdf\Encrypt\Type\RCFourSixteen
  *
- * RC4-40 is the standard encryption algorithm used in PDF format
+ * RC4-128 is the standard encryption algorithm used in PDF format
  * The key length is 16 bytes (128 bits)
  *
  * @since     2011-05-23

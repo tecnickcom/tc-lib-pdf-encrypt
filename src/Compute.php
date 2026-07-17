@@ -63,7 +63,7 @@ abstract class Compute extends \Com\Tecnick\Pdf\Encrypt\Data
                 $key = $this->getObjectKey($objnum);
             }
 
-            if ($this->encryptdata['mode'] >= 3) { // mode >= 3: AES-256 (R5 or R6) — use the full document key
+            if ($this->encryptdata['mode'] >= 3) { // mode >= 3: AES-256 (R5 or R6), use the full document key
                 $key = $this->encryptdata['key'];
             }
         }

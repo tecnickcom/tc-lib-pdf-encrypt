@@ -57,7 +57,7 @@ class Seed
             && \function_exists('openssl_random_pseudo_bytes')
             && \strtoupper(\substr(PHP_OS, 0, 3)) !== 'WIN'
         ) {
-            // this is not used on windows systems because it is very slow for a know bug
+            // this is not used on windows systems because it is very slow for a known bug
             $rnd .= \openssl_random_pseudo_bytes(512);
 
             return $rnd . $data . __DIR__ . __FILE__ . $key . \serialize($_SERVER) . microtime(true);

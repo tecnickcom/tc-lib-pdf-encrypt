@@ -259,11 +259,11 @@ abstract class Output
             $out .= '4' . "\n";
         }
 
-        if ($this->encryptdata['V'] < 2) { // RC-40
+        if ($this->encryptdata['V'] < 2) { // RC4-40
             $out .= '2' . "\n";
         }
 
-        if ($this->encryptdata['V'] >= 2 && $this->encryptdata['V'] < 4) { // RC-128
+        if ($this->encryptdata['V'] >= 2 && $this->encryptdata['V'] < 4) { // RC4-128
             $out .= '3' . "\n";
         }
 
@@ -296,6 +296,9 @@ abstract class Output
         return $value ? 'true' : 'false';
     }
 
+    /**
+     * Copy the EncryptMetadata flag into the crypt filter dictionary before output.
+     */
     protected function setMissingValues(): void
     {
         $this->encryptdata['CF']['EncryptMetadata'] = $this->encryptdata['EncryptMetadata'];

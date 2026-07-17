@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 /**
- * Encrypt.php
+ * Data.php
  *
  * @since     2008-01-02
  * @category  Library
