@@ -28,10 +28,11 @@
     "require": {
         "php": ">=8.2",
         "ext-hash": "*",
-        "ext-openssl": "*"
+        "ext-openssl": "*",
+        "ext-pcre": "*"
     },
     "suggest": {
-        "ext-posix": "*"
+        "ext-posix": "Adds the process id to the random seed material"
     },
     "minimum-stability": "stable",
     "prefer-stable": true,
