@@ -47,6 +47,7 @@ namespace Com\Tecnick\Pdf\Encrypt;
  *     'OKS': string,
  *     'OVS': string,
  *     'P': int,
+ *     'R': int,
  *     'Recipients': array<string>,
  *     'StmF': string,
  *     'StrF': string,
@@ -92,6 +93,7 @@ abstract class Output
         'OKS' => '',
         'OVS' => '',
         'P' => 0,
+        'R' => 0,
         'Recipients' => [],
         'StmF' => '',
         'StrF' => '',
@@ -235,13 +237,10 @@ abstract class Output
             return $out;
         }
 
-        $out .= '/R ';
-        if ($this->encryptdata['V'] >= 5) { // AES-256 R5 or R6
-            $revision = $this->encryptdata['V'] >= 6 ? '6' : '5';
+        $out .= '/R ' . $this->encryptdata['R'] . "\n";
+        if ($this->encryptdata['R'] >= 5) { // AES-256 R5 or R6
             $out .=
-                $revision
-                . "\n"
-                . '/OE ('
+                '/OE ('
                 . $this->escapeString($this->encryptdata['OE'])
                 . ')'
                 . "\n"
@@ -253,18 +252,6 @@ abstract class Output
                 . $this->escapeString($this->encryptdata['perms'])
                 . ')'
                 . "\n";
-        }
-
-        if ($this->encryptdata['V'] === 4) { // AES-128
-            $out .= '4' . "\n";
-        }
-
-        if ($this->encryptdata['V'] < 2) { // RC4-40
-            $out .= '2' . "\n";
-        }
-
-        if ($this->encryptdata['V'] >= 2 && $this->encryptdata['V'] < 4) { // RC4-128
-            $out .= '3' . "\n";
         }
 
         $out .=

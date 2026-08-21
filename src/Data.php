@@ -100,6 +100,7 @@ abstract class Data extends \Com\Tecnick\Pdf\Encrypt\Output
      *
      * @var array<int, array{
      *          'V': int,
+     *          'R': int,
      *          'Length': int,
      *          'CF': array{
      *              'CFM': string,
@@ -114,6 +115,7 @@ abstract class Data extends \Com\Tecnick\Pdf\Encrypt\Output
         0 => [
             // RC4 40 bit
             'V' => 1,
+            'R' => 2,
             'Length' => 40,
             'CF' => [
                 'CFM' => 'V2',
@@ -125,6 +127,7 @@ abstract class Data extends \Com\Tecnick\Pdf\Encrypt\Output
         1 => [
             // RC4 128 bit
             'V' => 2,
+            'R' => 3,
             'Length' => 128,
             'CF' => [
                 'CFM' => 'V2',
@@ -136,6 +139,7 @@ abstract class Data extends \Com\Tecnick\Pdf\Encrypt\Output
         2 => [
             // AES 128 bit
             'V' => 4,
+            'R' => 4,
             'Length' => 128,
             'CF' => [
                 'CFM' => 'AESV2',
@@ -148,6 +152,7 @@ abstract class Data extends \Com\Tecnick\Pdf\Encrypt\Output
         3 => [
             // AES 256 bit (R5, Acrobat 9 / PDF 1.7 extension)
             'V' => 5,
+            'R' => 5,
             'Length' => 256,
             'CF' => [
                 'CFM' => 'AESV3',
@@ -159,7 +164,8 @@ abstract class Data extends \Com\Tecnick\Pdf\Encrypt\Output
         ],
         4 => [
             // AES 256 bit R6 (PDF 2.0 / ISO 32000-2)
-            'V' => 6,
+            'V' => 5,
+            'R' => 6,
             'Length' => 256,
             'CF' => [
                 'CFM' => 'AESV3',

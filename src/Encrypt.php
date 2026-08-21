@@ -47,7 +47,9 @@ class Encrypt extends \Com\Tecnick\Pdf\Encrypt\Compute
      *        Protecting a document requires to encrypt it, which requires long processing time and may cause timeouts.
      *
      * @param bool   $enabled     False if the encryption is disabled (i.e. the document is in PDF/A mode)
-     * @param string $file_id     File ID
+     * @param string $file_id     File ID as an hexadecimal string; a random one is generated when empty.
+     *                            It is the value the document must expose as the first element of the
+     *                            trailer /ID array, because revisions 2 to 4 derive the key from it.
      * @param int    $mode        Encryption strength: 0 = RC4-40 (deprecated); 1 = RC4-128 (deprecated);
      *                            2 = AES-128; 3 = AES-256 R5; 4 = AES-256 R6 (PDF 2.0 / ISO 32000-2)
      * @param array<string>  $permissions The set of permissions (specify the ones you want to block):
@@ -131,6 +133,10 @@ class Encrypt extends \Com\Tecnick\Pdf\Encrypt\Compute
         }
 
         $this->encryptdata['encrypted'] = true;
+        if ($file_id === '') {
+            $file_id = \md5($this->encrypt('seed'));
+        }
+
         $this->encryptdata['fileid'] = $this->convertHexStringToString($file_id);
         $this->generateEncryptionKey();
     }
@@ -198,6 +204,7 @@ class Encrypt extends \Com\Tecnick\Pdf\Encrypt\Compute
 
         $settings = self::ENCRYPT_SETTINGS[$mode] ?? throw new EncException('unknown encryption mode: ' . $mode);
         $this->encryptdata['V'] = $settings['V'];
+        $this->encryptdata['R'] = $settings['R'];
         $this->encryptdata['Length'] = $settings['Length'];
         $this->encryptdata['CF'] = [
             'CFM' => $settings['CF']['CFM'],

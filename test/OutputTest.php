@@ -130,7 +130,7 @@ class OutputTest extends TestUtil
         $pon = 122;
         $result = $encrypt->getPdfEncryptionObj($pon);
         $this->assertTrue(\strlen($result) > 300);
-        $this->assertStringContainsString('/V 6', $result);
+        $this->assertStringContainsString('/V 5', $result);
         $this->assertStringContainsString('/R 6', $result);
         $this->assertStringContainsString('/Length 256', $result);
     }
@@ -212,7 +212,7 @@ class OutputTest extends TestUtil
         $pon = 122;
         $result = $encrypt->getPdfEncryptionObj($pon);
         $this->assertTrue(\strlen($result) > 200);
-        $this->assertStringContainsString('/V 6', $result);
+        $this->assertStringContainsString('/V 5', $result);
     }
 
     public function testSetMissingValuesCopiesEncryptMetadataFalseToCf(): void

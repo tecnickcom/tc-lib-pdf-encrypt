@@ -237,13 +237,14 @@ class EncryptTest extends TestUtil
         $this->assertEquals(32, \strlen($result));
     }
 
-    /** Issue 4: AES-256 R6 (mode 4) encryptdata must have V=6 and mode=4. */
+    /** Issue 4: AES-256 R6 (mode 4) encryptdata must have V=5, R=6 and mode=4. */
     public function testEncryptFourSettings(): void
     {
         $encrypt = new \Com\Tecnick\Pdf\Encrypt\Encrypt(true, \md5('file_id'), 4, ['print'], 'alpha', 'beta');
         $data = $encrypt->getEncryptionData();
         $this->assertEquals(4, $data['mode']);
-        $this->assertEquals(6, $data['V']);
+        $this->assertEquals(5, $data['V']);
+        $this->assertEquals(6, $data['R']);
         $this->assertEquals(256, $data['Length']);
         $this->assertEquals('AESV3', $data['CF']['CFM']);
         $this->assertEquals(48, \strlen($data['U']));
@@ -251,6 +252,15 @@ class EncryptTest extends TestUtil
         $this->assertEquals(32, \strlen($data['UE']));
         $this->assertEquals(32, \strlen($data['OE']));
         $this->assertEquals(16, \strlen($data['perms']));
+    }
+
+    /** An empty file ID is replaced by a random one: revisions 2 to 4 derive the key from it. */
+    public function testEmptyFileIdIsGenerated(): void
+    {
+        $encrypt = new \Com\Tecnick\Pdf\Encrypt\Encrypt(true, '', 2, ['print']);
+        $data = $encrypt->getEncryptionData();
+        $this->assertEquals(16, \strlen($data['fileid']));
+        $this->assertEquals(4, $data['R']);
     }
 
     /** Issue 4: AES-256 R6 (mode 4) public-key encryption. */
