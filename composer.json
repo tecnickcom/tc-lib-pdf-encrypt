@@ -26,7 +26,7 @@
         }
     ],
     "require": {
-        "php": ">=8.2",
+        "php": "^8.2",
         "ext-hash": "*",
         "ext-openssl": "*",
         "ext-pcre": "*"
@@ -37,6 +37,7 @@
     "minimum-stability": "stable",
     "prefer-stable": true,
     "require-dev": {
+        "carthage-software/mago": "^1.47",
         "pdepend/pdepend": "^2.16",
         "phpunit/phpunit": "^11.5 || ^12.5 || ^13.3"
     },
