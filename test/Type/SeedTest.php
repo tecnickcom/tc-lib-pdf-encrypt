@@ -34,17 +34,45 @@ class SeedTest extends TestUtil
         return new \Com\Tecnick\Pdf\Encrypt\Type\Seed();
     }
 
+    /** The output is SEEDLEN random bytes followed by the two arguments, in order. */
     public function testEncrypt(): void
     {
         $seed = $this->getTestObject();
         $result = $seed->encrypt('hello', 'world');
-        $this->assertNotEmpty($result);
+
+        $this->assertSame(\Com\Tecnick\Pdf\Encrypt\Type\Seed::SEEDLEN + 10, \strlen($result));
+        $this->assertSame('helloworld', \substr($result, \Com\Tecnick\Pdf\Encrypt\Type\Seed::SEEDLEN));
     }
 
-    public function testEncryptRaw(): void
+    /** Both arguments are optional and default to nothing. */
+    public function testEncryptWithoutArguments(): void
+    {
+        $result = $this->getTestObject()->encrypt();
+        $this->assertSame(\Com\Tecnick\Pdf\Encrypt\Type\Seed::SEEDLEN, \strlen($result));
+    }
+
+    /** The random part differs on every call and spans many distinct bytes. */
+    public function testEncryptIsRandom(): void
     {
         $seed = $this->getTestObject();
+        $seedlen = \Com\Tecnick\Pdf\Encrypt\Type\Seed::SEEDLEN;
+
+        $first = \substr($seed->encrypt('hello', 'world'), 0, $seedlen);
+        $second = \substr($seed->encrypt('hello', 'world'), 0, $seedlen);
+
+        $this->assertNotSame(\bin2hex($first), \bin2hex($second));
+        $this->assertNotSame(\str_repeat('00', \max(0, $seedlen)), \bin2hex($first));
+        $this->assertGreaterThan(32, \count(\array_unique(\str_split($first))));
+    }
+
+    /** The third argument is unused and does not reach the output. */
+    public function testEncryptIgnoresTheModeArgument(): void
+    {
+        $seed = $this->getTestObject();
+        $seedlen = \Com\Tecnick\Pdf\Encrypt\Type\Seed::SEEDLEN;
+
         $result = $seed->encrypt('hello', 'world', 'raw');
-        $this->assertNotEmpty($result);
+        $this->assertSame($seedlen + 10, \strlen($result));
+        $this->assertSame('helloworld', \substr($result, $seedlen));
     }
 }

@@ -1,27 +1,16 @@
-# Normalize text sources to LF in the repository and on checkout everywhere.
-# Critical for a byte-level library: keeps source and fixtures byte-identical
-# across Windows/macOS/Linux checkouts regardless of core.autocrlf.
-*.php      text eol=lf
-*.md       text eol=lf
-*.xml      text eol=lf
-*.xml.dist text eol=lf
-*.json     text eol=lf
-*.toml     text eol=lf
-*.yml      text eol=lf
-*.yaml     text eol=lf
-*.txt      text eol=lf
-Makefile   text eol=lf
+# Normalize text sources to LF in the repository and on checkout everywhere,
+# so that the tree is byte-identical across Windows/macOS/Linux checkouts
+# regardless of core.autocrlf. The catch-all covers the extensionless files
+# too: resources/debian/rules and resources/debian/source/format are read by
+# debuild and break as CRLF.
+* text=auto eol=lf
 
-# Byte-exact fixtures must never be transformed (CRLF/auto-detection off).
-test/**/*.bin -text
-*.png binary
-*.jpg binary
-*.gif binary
-*.pdf binary
-*.ttf binary
-*.otf binary
+# Certificates and keys are matched byte for byte by the tests.
+*.pem      -text
 
-# Keep development-only files out of the Packagist dist archive.
+# Keep contributor-only files out of the Packagist dist archive. Files a
+# consumer of the package may need (LICENSE, README.md, SECURITY.md) are
+# shipped; everything used only when working on the repository is not.
 /.editorconfig     export-ignore
 /.gitattributes    export-ignore
 /.github           export-ignore
@@ -31,6 +20,7 @@ test/**/*.bin -text
 /CONTRIBUTING.md   export-ignore
 /Makefile          export-ignore
 /RELEASE           export-ignore
+/VERSION           export-ignore
 /mago.src.toml     export-ignore
 /mago.test.toml    export-ignore
 /phpunit.xml.dist  export-ignore

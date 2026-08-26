@@ -55,53 +55,206 @@ class OutputTest extends TestUtil
             $encrypt = new \Com\Tecnick\Pdf\Encrypt\Encrypt(true, \md5('file_id'), 0, ['print'], 'alpha', 'beta');
             $pon = 122;
             $result = $encrypt->getPdfEncryptionObj($pon);
+            // Known-answer test: a fixed file ID and fixed passwords determine every byte.
             $expected =
-                '3132332030206f626a0a3c3c0a2f46696c746572202f5374616e646172640a2f5620310a2f4c656e6774682034300a2'
-                . 'f5220320a2f4f20280542fa0e15496869a825cd08c633ac10675c5c02167661241f5369895d768278b1290a2f552028550539dc185'
-                . 'e79d4c676f803babbdc50acf8a4427d2de5303d59e7c315b30eba290a2f5020323134373432323030380a2f456e63727970744d657'
-                . '4616461746120747275650a3e3e0a656e646f626a0a';
-            $this->assertEquals($expected, \bin2hex($result));
+                "123 0 obj\n"
+                . "<<\n"
+                . "/Filter /Standard\n"
+                . "/V 1\n"
+                . "/Length 40\n"
+                . "/R 2\n"
+                . "/O <0542fa0e15496869a825cd08c633ac10675c02167661241f5369895d768278b1>\n"
+                . "/U <fb1b03dcf0158aae2cedf5b8a90aa9325b8bca8cb0d07d6b67b2b993402ac2f5>\n"
+                . "/P -8\n"
+                // EncryptMetadata is defined for V 4 and V 5 only.
+                . ">>\n"
+                . "endobj\n";
+            $this->assertSame($expected, $result);
         });
     }
 
+    /**
+     * The O and U values of revision 3 were computed from ISO 32000-1
+     * Algorithms 2, 3 and 5 independently of this library.
+     */
     public function testGetPdfEncryptionObjOne(): void
     {
         $this->bcRunIgnoringUserDeprecations(function (): void {
             $encrypt = new \Com\Tecnick\Pdf\Encrypt\Encrypt(true, \md5('file_id'), 1, ['print'], 'alpha', 'beta');
             $pon = 122;
             $result = $encrypt->getPdfEncryptionObj($pon);
-            $this->assertTrue(\strlen($result) > 150);
+            $expected =
+                "123 0 obj\n"
+                . "<<\n"
+                . "/Filter /Standard\n"
+                . "/V 2\n"
+                . "/Length 128\n"
+                . "/R 3\n"
+                . "/O <8a270f21b879d1b085b290b9b7776208899d8f595c3b4af708a04f8d953e4fbd>\n"
+                . "/U <9cf46567f9b0fbce65deca971ea9950800000000000000000000000000000000>\n"
+                . "/P -8\n"
+                . ">>\n"
+                . "endobj\n";
+            $this->assertSame($expected, $result);
         });
     }
 
+    /** Revision 4 shares the revision 3 key derivation, and adds the crypt filter. */
     public function testGetPdfEncryptionObjTwo(): void
     {
         $encrypt = new \Com\Tecnick\Pdf\Encrypt\Encrypt(true, \md5('file_id'), 2, ['print'], 'alpha', 'beta');
         $pon = 122;
         $result = $encrypt->getPdfEncryptionObj($pon);
-        $this->assertTrue(\strlen($result) > 200);
+        $expected =
+            "123 0 obj\n"
+            . "<<\n"
+            . "/Filter /Standard\n"
+            . "/V 4\n"
+            . "/Length 128\n"
+            . "/CF <<\n"
+            . "/StdCF <<\n"
+            . "/Type /CryptFilter\n"
+            . "/CFM /AESV2\n"
+            . "/AuthEvent /DocOpen\n"
+            . "/Length 16\n"
+            . ">>\n"
+            . ">>\n"
+            . "/StmF /StdCF\n"
+            . "/StrF /StdCF\n"
+            . "/EFF /StdCF\n"
+            . "/R 4\n"
+            . "/O <8a270f21b879d1b085b290b9b7776208899d8f595c3b4af708a04f8d953e4fbd>\n"
+            . "/U <9cf46567f9b0fbce65deca971ea9950800000000000000000000000000000000>\n"
+            . "/P -8\n"
+            . "/EncryptMetadata true\n"
+            . ">>\n"
+            . "endobj\n";
+        $this->assertSame($expected, $result);
     }
 
+    /**
+     * Revisions 5 and 6 draw two salts and four Perms bytes at random, so only
+     * the shape of the dictionary is asserted here.
+     */
     public function testGetPdfEncryptionObjThree(): void
     {
         $encrypt = new \Com\Tecnick\Pdf\Encrypt\Encrypt(true, \md5('file_id'), 3, ['print'], 'alpha', 'beta');
         $pon = 122;
         $result = $encrypt->getPdfEncryptionObj($pon);
-        $this->assertTrue(\strlen($result) > 300);
+        $this->assertStringContainsString("/V 5\n", $result);
+        $this->assertStringContainsString("/R 5\n", $result);
+        $this->assertStringContainsString("/Length 256\n", $result);
+        $this->assertStringContainsString("/CFM /AESV3\n", $result);
+        $this->assertMatchesRegularExpression('~\n/O <[0-9a-f]{96}>\n~', $result);
+        $this->assertMatchesRegularExpression('~\n/U <[0-9a-f]{96}>\n~', $result);
+        $this->assertMatchesRegularExpression('~\n/OE <[0-9a-f]{64}>\n~', $result);
+        $this->assertMatchesRegularExpression('~\n/UE <[0-9a-f]{64}>\n~', $result);
+        $this->assertMatchesRegularExpression('~\n/Perms <[0-9a-f]{32}>\n~', $result);
+        $this->assertStringContainsString("/P -8\n", $result);
     }
 
+    /**
+     * The whole revision 5 dictionary, with the random source pinned. Every entry
+     * was computed from Adobe Extension Level 3 Algorithms 8, 9 and 10
+     * independently of this library.
+     */
+    public function testGetPdfEncryptionObjThreeKnownAnswer(): void
+    {
+        $encrypt = new DeterministicEncrypt(true, \md5('kat'), 3, ['print'], 'userpass', 'ownerpass');
+        $pon = 122;
+        $expected =
+            "123 0 obj\n"
+            . "<<\n"
+            . "/Filter /Standard\n"
+            . "/V 5\n"
+            . "/Length 256\n"
+            . "/CF <<\n"
+            . "/StdCF <<\n"
+            . "/Type /CryptFilter\n"
+            . "/CFM /AESV3\n"
+            . "/AuthEvent /DocOpen\n"
+            . "/Length 32\n"
+            . ">>\n"
+            . ">>\n"
+            . "/StmF /StdCF\n"
+            . "/StrF /StdCF\n"
+            . "/EFF /StdCF\n"
+            . "/R 5\n"
+            . "/OE <24f81ea8781ae0e126667db5c4351419d251597e3f9fee39f7f7ad21345325e6>\n"
+            . "/UE <f5bfc7e128b0aea23b4ad0e2574194e11fbbc94947f0fea507e09f1d9acbe46c>\n"
+            . "/Perms <38f1dac54f2cf35705ac098dc8b2a14d>\n"
+            . '/O <261f93fb622fcb5e99e93373fd19f130a306f0037e03d3163ce6715ecad1ffd0'
+            . "2942b99da77429eeb86767ec1bde925b>\n"
+            . '/U <4cd31bbdb787ed5fb722903e1e122e151af8039e43c67f5e134f5f0747a59e6f'
+            . "036fa5b2d8027e443eb32a70dace7de8>\n"
+            . "/P -8\n"
+            . "/EncryptMetadata true\n"
+            . ">>\n"
+            . "endobj\n";
+        $this->assertSame($expected, $encrypt->getPdfEncryptionObj($pon));
+    }
+
+    /** The same for revision 6, whose password hash is Algorithm 2.B. */
+    public function testGetPdfEncryptionObjFourKnownAnswer(): void
+    {
+        $encrypt = new DeterministicEncrypt(true, \md5('kat'), 4, ['print'], 'userpass', 'ownerpass');
+        $pon = 122;
+        $expected =
+            "123 0 obj\n"
+            . "<<\n"
+            . "/Filter /Standard\n"
+            . "/V 5\n"
+            . "/Length 256\n"
+            . "/CF <<\n"
+            . "/StdCF <<\n"
+            . "/Type /CryptFilter\n"
+            . "/CFM /AESV3\n"
+            . "/AuthEvent /DocOpen\n"
+            . "/Length 32\n"
+            . ">>\n"
+            . ">>\n"
+            . "/StmF /StdCF\n"
+            . "/StrF /StdCF\n"
+            . "/EFF /StdCF\n"
+            . "/R 6\n"
+            . "/OE <3ee1df3ccf3b3beca5339bd9ba51042ab35c3624716ba4c0a2b492e361fcb3e3>\n"
+            . "/UE <dce9d292203c654986b17e371129e548aba22d46114d2e7572b29ee152f67f93>\n"
+            . "/Perms <38f1dac54f2cf35705ac098dc8b2a14d>\n"
+            . '/O <0beb921148d38493a586e9c952b29673c5fe1fd883d51c6a722d8a0120318cff'
+            . "2942b99da77429eeb86767ec1bde925b>\n"
+            . '/U <f770972a5cf0392377860a6e6d466e55065d033119834d858f7916d90d710710'
+            . "036fa5b2d8027e443eb32a70dace7de8>\n"
+            . "/P -8\n"
+            . "/EncryptMetadata true\n"
+            . ">>\n"
+            . "endobj\n";
+        $this->assertSame($expected, $encrypt->getPdfEncryptionObj($pon));
+    }
+
+    /**
+     * A public-key dictionary carries the recipient envelopes instead of the
+     * O, U and P entries of the standard handler.
+     */
     public function testGetPdfEncryptionObjThreePub(): void
     {
         $pubkeys = [[
             'c' => __DIR__ . '/data/cert.pem',
             'p' => ['print'],
         ]];
-        $encrypt = new \Com\Tecnick\Pdf\Encrypt\Encrypt(true, \md5('file_id'), 3, ['print'], 'alpha', 'beta', $pubkeys);
+        $encrypt = new \Com\Tecnick\Pdf\Encrypt\Encrypt(true, \md5('file_id'), 3, pubkeys: $pubkeys);
         $pon = 122;
         $result = $encrypt->getPdfEncryptionObj($pon);
-        $this->assertTrue(\strlen($result) > 200);
+        $this->assertStringContainsString("/Filter /Adobe.PubSec\n", $result);
+        $this->assertStringContainsString("/SubFilter /adbe.pkcs7.s5\n", $result);
+        $this->assertStringContainsString("/V 5\n", $result);
+        $this->assertStringContainsString("/StmF /DefaultCryptFilter\n", $result);
+        $this->assertMatchesRegularExpression('~\n/Recipients \[ <[0-9a-f]+> \]\n~', $result);
+        $this->assertStringNotContainsString('/O <', $result);
+        $this->assertStringNotContainsString('/U <', $result);
+        $this->assertStringNotContainsString('/P ', $result);
     }
 
+    /** Below V 4 the recipients live in the dictionary itself, not in a crypt filter. */
     public function testGetPdfEncryptionObjOnePub(): void
     {
         $this->bcRunIgnoringUserDeprecations(function (): void {
@@ -109,18 +262,14 @@ class OutputTest extends TestUtil
                 'c' => __DIR__ . '/data/cert.pem',
                 'p' => ['print'],
             ]];
-            $encrypt = new \Com\Tecnick\Pdf\Encrypt\Encrypt(
-                true,
-                \md5('file_id'),
-                1,
-                ['print'],
-                'alpha',
-                'beta',
-                $pubkeys,
-            );
+            $encrypt = new \Com\Tecnick\Pdf\Encrypt\Encrypt(true, \md5('file_id'), 1, pubkeys: $pubkeys);
             $pon = 122;
             $result = $encrypt->getPdfEncryptionObj($pon);
-            $this->assertTrue(\strlen($result) > 100);
+            $this->assertStringContainsString("/Filter /Adobe.PubSec\n", $result);
+            $this->assertStringContainsString("/SubFilter /adbe.pkcs7.s4\n", $result);
+            $this->assertStringContainsString("/V 2\n", $result);
+            $this->assertStringNotContainsString('/CF <<', $result);
+            $this->assertMatchesRegularExpression('~\n /Recipients \[ <[0-9a-f]+> \]\n~', $result);
         });
     }
 
@@ -129,16 +278,17 @@ class OutputTest extends TestUtil
         $encrypt = new \Com\Tecnick\Pdf\Encrypt\Encrypt(true, \md5('file_id'), 4, ['print'], 'alpha', 'beta');
         $pon = 122;
         $result = $encrypt->getPdfEncryptionObj($pon);
-        $this->assertTrue(\strlen($result) > 300);
         $this->assertStringContainsString('/V 5', $result);
         $this->assertStringContainsString('/R 6', $result);
         $this->assertStringContainsString('/Length 256', $result);
+        $this->assertMatchesRegularExpression('~\n/O <[0-9a-f]{96}>\n~', $result);
+        $this->assertMatchesRegularExpression('~\n/U <[0-9a-f]{96}>\n~', $result);
+        $this->assertMatchesRegularExpression('~\n/Perms <[0-9a-f]{32}>\n~', $result);
     }
 
-    /** Issue 1: EFF entry must appear for V >= 4 when embedded file encryption is enabled. */
+    /** /EFF points at the stream filter when embedded file encryption is enabled. */
     public function testGetPdfEncryptionObjEff(): void
     {
-        // V >= 4 (mode 2 = AES-128, V=4) with embedded file encryption enabled (default)
         $encrypt = new \Com\Tecnick\Pdf\Encrypt\Encrypt(
             true,
             \md5('file_id'),
@@ -155,7 +305,10 @@ class OutputTest extends TestUtil
         $this->assertStringContainsString('/EFF /StdCF', $result);
     }
 
-    /** Issue 1: No EFF entry when embedded file encryption is disabled. */
+    /**
+     * /EFF is written as /Identity when embedded file encryption is disabled:
+     * ISO 32000-1 section 7.6.1 makes an absent /EFF mean /StmF.
+     */
     public function testGetPdfEncryptionObjNoEff(): void
     {
         $encrypt = new \Com\Tecnick\Pdf\Encrypt\Encrypt(
@@ -171,10 +324,30 @@ class OutputTest extends TestUtil
         );
         $pon = 0;
         $result = $encrypt->getPdfEncryptionObj($pon);
-        $this->assertStringNotContainsString('/EFF', $result);
+        $this->assertStringContainsString("/EFF /Identity\n", $result);
     }
 
-    /** Issue 3: EncryptMetadata=false must appear in standard-mode output. */
+    /** The /EFF entry is defined for V 4 and V 5 only, so below that it is absent. */
+    public function testGetPdfEncryptionObjNoEffBelowVersionFour(): void
+    {
+        $this->bcRunIgnoringUserDeprecations(function (): void {
+            $encrypt = new \Com\Tecnick\Pdf\Encrypt\Encrypt(
+                true,
+                \md5('file_id'),
+                1,
+                ['print'],
+                'alpha',
+                'beta',
+                null,
+                true,
+                false,
+            );
+            $pon = 0;
+            $this->assertStringNotContainsString('/EFF', $encrypt->getPdfEncryptionObj($pon));
+        });
+    }
+
+    /** EncryptMetadata=false appears in standard-mode output. */
     public function testGetPdfEncryptionObjEncryptMetadataFalse(): void
     {
         $encrypt = new \Com\Tecnick\Pdf\Encrypt\Encrypt(
@@ -192,7 +365,7 @@ class OutputTest extends TestUtil
         $this->assertStringContainsString('/EncryptMetadata false', $result);
     }
 
-    /** Issue 3: EncryptMetadata=true (default) must appear as true in output. */
+    /** EncryptMetadata=true, the default, appears in standard-mode output. */
     public function testGetPdfEncryptionObjEncryptMetadataTrue(): void
     {
         $encrypt = new \Com\Tecnick\Pdf\Encrypt\Encrypt(true, \md5('file_id'), 3, ['print'], 'alpha', 'beta');
@@ -201,18 +374,37 @@ class OutputTest extends TestUtil
         $this->assertStringContainsString('/EncryptMetadata true', $result);
     }
 
-    /** Issue 4: mode 4 pubkey output must contain Recipients. */
+    /** Mode 4 public-key output carries the Recipients array. */
     public function testGetPdfEncryptionObjFourPub(): void
     {
         $pubkeys = [[
             'c' => __DIR__ . '/data/cert.pem',
             'p' => ['print'],
         ]];
-        $encrypt = new \Com\Tecnick\Pdf\Encrypt\Encrypt(true, \md5('file_id'), 4, ['print'], 'alpha', 'beta', $pubkeys);
+        $encrypt = new \Com\Tecnick\Pdf\Encrypt\Encrypt(true, \md5('file_id'), 4, pubkeys: $pubkeys);
         $pon = 122;
         $result = $encrypt->getPdfEncryptionObj($pon);
-        $this->assertTrue(\strlen($result) > 200);
-        $this->assertStringContainsString('/V 5', $result);
+        $this->assertStringContainsString("/V 5\n", $result);
+        $this->assertStringContainsString("/CFM /AESV3\n", $result);
+        $this->assertMatchesRegularExpression('~\n/Recipients \[ <[0-9a-f]+> \]\n~', $result);
+        $this->assertStringContainsString("/EncryptMetadata true\n", $result);
+    }
+
+    /** Each recipient contributes one entry to the Recipients array, in order. */
+    public function testGetPdfEncryptionObjListsEveryRecipient(): void
+    {
+        $pubkeys = [
+            ['c' => __DIR__ . '/data/cert.pem', 'p' => ['print']],
+            ['c' => __DIR__ . '/data/cert2.pem', 'p' => ['copy']],
+        ];
+        $encrypt = new \Com\Tecnick\Pdf\Encrypt\Encrypt(true, \md5('file_id'), 3, pubkeys: $pubkeys);
+        $pon = 0;
+        $result = $encrypt->getPdfEncryptionObj($pon);
+
+        $recipients = $encrypt->getEncryptionData()['Recipients'];
+        $this->assertCount(2, $recipients);
+        $expected = '/Recipients [ <' . ($recipients[0] ?? '') . '> <' . ($recipients[1] ?? '') . "> ]\n";
+        $this->assertStringContainsString($expected, $result);
     }
 
     public function testSetMissingValuesCopiesEncryptMetadataFalseToCf(): void

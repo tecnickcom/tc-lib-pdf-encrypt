@@ -21,10 +21,6 @@ use Com\Tecnick\Pdf\Encrypt\Type\AESnopad;
 /**
  * AESnopad encryption Test
  *
- * Verifies that pad() extends data to the next multiple of BLOCKSIZE without
- * truncating, so that stream data longer than one AES block is not silently
- * discarded before encryption.
- *
  * @since     2011-05-23
  * @category  Library
  * @package   PdfEncrypt
@@ -36,9 +32,14 @@ use Com\Tecnick\Pdf\Encrypt\Type\AESnopad;
 class AESnopadTest extends TestUtil
 {
     /**
-     * 32-byte key used throughout (exact multiple of BLOCKSIZE, no padding applied).
+     * 32-byte key for the aes-256-cbc variant.
      */
     private const KEY256 = '0123456789abcdef0123456789abcdef';
+
+    /**
+     * 16-byte key for the aes-128-cbc variant.
+     */
+    private const KEY128 = '0123456789abcdef';
 
     protected function getTestObject(): AESnopad
     {
@@ -46,10 +47,8 @@ class AESnopadTest extends TestUtil
     }
 
     /**
-     * AESnopad::encrypt() returns padded_len bytes of ciphertext (no IV prefix).
-     * padded_len = ceil(n / 16) * 16, but if n % 16 == 0 then padded_len = n.
-     *
-     * The formula below matches that behaviour for all cases tested.
+     * Length of the ciphertext of a plaintext of $plainLen bytes: the input
+     * length rounded up to a multiple of BLOCKSIZE, with no IV prefix.
      */
     private function expectedCiphertextLen(int $plainLen): int
     {
@@ -57,7 +56,7 @@ class AESnopadTest extends TestUtil
         return $rem === 0 ? $plainLen : $plainLen + (AESnopad::BLOCKSIZE - $rem);
     }
 
-    // --- output-length tests (validate pad() indirectly) ---
+    // --- output length ---
 
     public function testEncryptOutputLenShortData(): void
     {
@@ -68,7 +67,7 @@ class AESnopadTest extends TestUtil
 
     public function testEncryptOutputLenExactlyOneBlock(): void
     {
-        // 16 bytes → already a multiple, no extra padding → 16
+        // 16 bytes → already aligned, no padding → 16
         $enc = $this->getTestObject()->encrypt(\str_repeat('x', 16), self::KEY256);
         $this->assertSame($this->expectedCiphertextLen(16), \strlen($enc));
     }
@@ -76,15 +75,13 @@ class AESnopadTest extends TestUtil
     public function testEncryptOutputLenJustOverOneBlock(): void
     {
         // 17 bytes → padded to 32
-        // This test would fail with the old code (which truncated data to 16 bytes,
-        // producing only 16 bytes of ciphertext regardless of input length).
         $enc = $this->getTestObject()->encrypt(\str_repeat('x', 17), self::KEY256);
         $this->assertSame($this->expectedCiphertextLen(17), \strlen($enc));
     }
 
     public function testEncryptOutputLenTwoBlocks(): void
     {
-        // 32 bytes → padded to 32
+        // 32 bytes → already aligned, no padding → 32
         $enc = $this->getTestObject()->encrypt(\str_repeat('x', 32), self::KEY256);
         $this->assertSame($this->expectedCiphertextLen(32), \strlen($enc));
     }
@@ -103,10 +100,7 @@ class AESnopadTest extends TestUtil
         $this->assertSame($this->expectedCiphertextLen(100), \strlen($enc));
     }
 
-    /**
-     * Longer input must produce longer ciphertext.
-     * With the old bug, both short and long inputs produced 16-byte ciphertext.
-     */
+    /** A longer input produces a longer ciphertext. */
     public function testCiphertextGrowsWithPlaintext(): void
     {
         $aesnopad = $this->getTestObject();
@@ -118,13 +112,41 @@ class AESnopadTest extends TestUtil
         $this->assertGreaterThan(\strlen($short), \strlen($long));
     }
 
-    // --- AES-128-CBC variant ---
+    // --- aes-128-cbc variant ---
 
     public function testEncryptAes128OutputLen(): void
     {
-        // 17 bytes with aes-128-cbc → padded to 32
-        $enc = $this->getTestObject()->encrypt(\str_repeat('x', 17), self::KEY256, AESnopad::IVECT, 'aes-128-cbc');
+        // 17 bytes → padded to 32
+        $enc = $this->getTestObject()->encrypt(\str_repeat('x', 17), self::KEY128, AESnopad::IVECT, 'aes-128-cbc');
         $this->assertSame($this->expectedCiphertextLen(17), \strlen($enc));
+    }
+
+    /** A key that does not match the cipher is rejected. */
+    public function testEncryptWrongKeyLengthThrows(): void
+    {
+        $this->bcExpectException(\Com\Tecnick\Pdf\Encrypt\Exception::class);
+        $this->getTestObject()->encrypt('data', self::KEY128, AESnopad::IVECT, 'aes-256-cbc');
+    }
+
+    public function testDecryptWrongKeyLengthThrows(): void
+    {
+        $this->bcExpectException(\Com\Tecnick\Pdf\Encrypt\Exception::class);
+        $this->getTestObject()->decrypt(\str_repeat('c', 32), self::KEY256, AESnopad::IVECT, 'aes-128-cbc');
+    }
+
+    /** NIST SP 800-38A F.2.5 AES-256-CBC vector, first block only. */
+    public function testAes256CbcKnownAnswer(): void
+    {
+        $key = \hex2bin('603deb1015ca71be2b73aef0857d77811f352c073b6108d72d9810a30914dff4');
+        $ivect = \hex2bin('000102030405060708090a0b0c0d0e0f');
+        $plaintext = \hex2bin('6bc1bee22e409f96e93d7e117393172a');
+        $this->assertIsString($key);
+        $this->assertIsString($ivect);
+        $this->assertIsString($plaintext);
+
+        $enc = $this->getTestObject()->encrypt($plaintext, $key, $ivect);
+        $this->assertSame('f58c4c04d6e5f1ba779eabfb5f7bfbd6', \bin2hex($enc));
+        $this->assertSame($plaintext, $this->getTestObject()->decrypt($enc, $key, $ivect));
     }
 
     // --- deterministic output with fixed IV ---
@@ -154,25 +176,13 @@ class AESnopadTest extends TestUtil
         $this->getTestObject()->encrypt('data', self::KEY256, AESnopad::IVECT, 'des-cbc');
     }
 
-    public function testCheckCipherUnavailable(): void
+    /** Every cipher in VALID_CIPHERS is provided by the runtime. */
+    public function testEveryValidCipherIsAvailable(): void
     {
-        $missingCipher = null;
         $available = \openssl_get_cipher_methods();
         foreach (AESnopad::VALID_CIPHERS as $cipher) {
-            if (\in_array($cipher, $available, true)) {
-                continue;
-            }
-
-            $missingCipher = $cipher;
-            break;
+            $this->assertContains($cipher, $available, $cipher);
         }
-
-        if ($missingCipher === null) {
-            $this->markTestSkipped('All AESnopad valid ciphers are available on this runtime.');
-        }
-
-        $this->bcExpectException(\Com\Tecnick\Pdf\Encrypt\Exception::class);
-        $this->getTestObject()->checkCipher($missingCipher);
     }
 
     public function testDecryptInvalidCiphertextLength(): void

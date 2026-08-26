@@ -34,6 +34,76 @@ class AESTest extends TestUtil
         return new \Com\Tecnick\Pdf\Encrypt\Type\AES();
     }
 
+    /**
+     * Split the 16-byte IV prefix off and decrypt the remainder with OpenSSL,
+     * which validates the PKCS#7 padding as well.
+     */
+    private function decryptWithOpenSsl(string $encrypted, string $key, string $cipher): string
+    {
+        $plain = \openssl_decrypt(\substr($encrypted, 16), $cipher, $key, OPENSSL_RAW_DATA, \substr($encrypted, 0, 16));
+        $this->assertIsString($plain);
+        return $plain;
+    }
+
+    /**
+     * @return array<string, array{string, string}>
+     */
+    public static function cipherProvider(): array
+    {
+        return [
+            'aes-128-cbc' => ['aes-128-cbc', '0123456789abcdef'],
+            'aes-256-cbc' => ['aes-256-cbc', '0123456789abcdef0123456789abcdef'],
+        ];
+    }
+
+    /** The ciphertext decrypts back to the plaintext. */
+    #[\PHPUnit\Framework\Attributes\DataProvider('cipherProvider')]
+    public function testEncryptedPayloadDecryptsToThePlaintext(string $cipher, string $key): void
+    {
+        $aes = $this->getTestObject();
+
+        foreach (['', 'alpha', \str_repeat('x', 16), \str_repeat('x', 100)] as $plaintext) {
+            $encrypted = $aes->encrypt($plaintext, $key, $cipher);
+            $this->assertSame($plaintext, $this->decryptWithOpenSsl($encrypted, $key, $cipher), $cipher);
+        }
+    }
+
+    /** The IV prefix is the one the ciphertext was produced with. */
+    #[\PHPUnit\Framework\Attributes\DataProvider('cipherProvider')]
+    public function testTheIvPrefixIsTheOneUsed(string $cipher, string $key): void
+    {
+        // Three blocks: replacing the IV corrupts the first one and leaves the
+        // padding of the last one valid, so the decryption completes.
+        $plaintext = \str_repeat('x', 40);
+        $encrypted = $this->getTestObject()->encrypt($plaintext, $key, $cipher);
+        $wrongIv = \str_repeat("\x00", 16) . \substr($encrypted, 16);
+
+        $this->assertSame($plaintext, $this->decryptWithOpenSsl($encrypted, $key, $cipher));
+        $this->assertNotSame($plaintext, $this->decryptWithOpenSsl($wrongIv, $key, $cipher));
+    }
+
+    /** Arbitrary bytes survive the round trip unchanged. */
+    public function testBinaryPayloadDecryptsToThePlaintext(): void
+    {
+        $key = '0123456789abcdef0123456789abcdef';
+        $plaintext = \random_bytes(257);
+        $encrypted = $this->getTestObject()->encrypt($plaintext, $key, 'aes-256-cbc');
+        $this->assertSame(\bin2hex($plaintext), \bin2hex($this->decryptWithOpenSsl($encrypted, $key, 'aes-256-cbc')));
+    }
+
+    /** The default cipher for a 16-byte key is AES-128. */
+    public function testDefaultCipherFollowsTheKeyLength(): void
+    {
+        $aes = $this->getTestObject();
+
+        $enc128 = $aes->encrypt('alpha', '0123456789abcdef');
+        $this->assertSame('alpha', $this->decryptWithOpenSsl($enc128, '0123456789abcdef', 'aes-128-cbc'));
+
+        $key256 = '0123456789abcdef0123456789abcdef';
+        $enc256 = $aes->encrypt('alpha', $key256, '');
+        $this->assertSame('alpha', $this->decryptWithOpenSsl($enc256, $key256, 'aes-256-cbc'));
+    }
+
     public function testEncrypt128(): void
     {
         $aes = $this->getTestObject();
@@ -65,13 +135,8 @@ class AESTest extends TestUtil
     }
 
     /**
-     * AES::encrypt() output = 16-byte IV + PKCS#7-padded ciphertext.
-     * padded_len = ceil((n + 1)/16) * 16, so aligned input gets one full block.
-     * Total = padded_len + 16.
-     *
-     * With the old truncation bug, pad() always produced 16 bytes, so every
-     * plaintext — no matter how long — produced a 32-byte output.  These tests
-     * verify that the output size grows correctly with the plaintext length.
+     * The output is a 16-byte IV followed by the PKCS#7-padded ciphertext, so an
+     * aligned input carries one full padding block.
      */
     public function testEncrypt128LongData(): void
     {
@@ -90,7 +155,7 @@ class AESTest extends TestUtil
         $enc33 = $aes->encrypt(\str_repeat('x', 33), $key, 'aes-128-cbc');
         $this->assertSame(64, \strlen($enc33));
 
-        // Short input must produce shorter output than long input.
+        // A shorter input produces a shorter output.
         $encShort = $aes->encrypt('alpha', $key, 'aes-128-cbc'); // 5 bytes → 32
         $this->assertGreaterThan(\strlen($encShort), \strlen($enc33));
     }
@@ -122,5 +187,23 @@ class AESTest extends TestUtil
         $this->bcExpectException(\Com\Tecnick\Pdf\Encrypt\Exception::class);
         $aes = $this->getTestObject();
         $aes->encrypt('alpha', '12345', 'ERROR');
+    }
+
+    /** A key that does not match the cipher is rejected. */
+    public function testEncryptWrongKeyLengthThrows(): void
+    {
+        $this->bcExpectException(\Com\Tecnick\Pdf\Encrypt\Exception::class);
+        $this->getTestObject()->encrypt('alpha', '12345', 'aes-128-cbc');
+    }
+
+    /** Each call uses a fresh random IV. */
+    public function testEncryptUsesFreshIv(): void
+    {
+        $aes = $this->getTestObject();
+        $key = '0123456789abcdef';
+        $enc1 = $aes->encrypt('alpha', $key, 'aes-128-cbc');
+        $enc2 = $aes->encrypt('alpha', $key, 'aes-128-cbc');
+        $this->assertNotSame(\substr($enc1, 0, 16), \substr($enc2, 0, 16));
+        $this->assertNotSame($enc1, $enc2);
     }
 }

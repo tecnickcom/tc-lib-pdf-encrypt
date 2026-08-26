@@ -89,18 +89,13 @@ COMPOSER=$(PHP) -d "apc.enable_cli=0" $(shell which composer)
 # phpDocumentor executable file
 PHPDOC=$(shell which phpDocumentor)
 
-# Set default OpenSSL configuration file
-ifeq ($(OPENSSL_CONF),)
-	OPENSSL_CONF=$(CURRENTDIR)openssl.cnf
-endif
-
 # --- MAKE TARGETS ---
 
 # Display general help about this command
 .PHONY: help
 help:
 	@echo ""
-	@echo "$(PROJECT) $(OPENSSL_CONF) Makefile."
+	@echo "$(PROJECT) Makefile."
 	@echo "The following commands are available:"
 	@echo ""
 	@awk '/^## /{desc=substr($$0,4)} /^\.PHONY:/{if(NF>1) {target=$$2; if(desc) printf "  make %-15s: %s\n",target,desc; desc=""}}' Makefile
@@ -119,13 +114,13 @@ x: buildall
 
 ## Full build and test sequence
 .PHONY: buildall
-buildall: deps format qa bz2 rpm deb
+buildall: deps qa report bz2 rpm deb
 
 ## Package the library in a compressed bz2 archive
 .PHONY: bz2
 bz2:
 	rm -rf "$(PATHBZ2PKG)"
-	make install DESTDIR="$(PATHBZ2PKG)"
+	$(MAKE) install DESTDIR="$(PATHBZ2PKG)"
 	tar -jcvf "$(PATHBZ2PKG)/$(PKGNAME)-$(VERSION)-$(RELEASE).tbz2" -C "$(PATHBZ2PKG)" "$(DATADIR)"
 
 ## Delete the vendor and target directories
@@ -163,19 +158,20 @@ endif
 ## Clean all artifacts and download all dependencies
 .PHONY: deps
 deps: ensuretarget
-	rm -rf ./vendor/*
+	rm -rf ./vendor
 	($(COMPOSER) install -vvv --no-interaction)
 
 ## Generate source code documentation
 .PHONY: doc
 doc: ensuretarget
+	@test -n "$(PHPDOC)" || { echo "ERROR: phpDocumentor is not on PATH: see https://phpdoc.org"; exit 1; }
 	rm -rf "$(TARGETDIR)/doc"
 	$(PHPDOC) -d ./src -t "$(TARGETDIR)/doc/"
 
 ## Create missing target directories for test and build artifacts
 .PHONY: ensuretarget
 ensuretarget:
-	mkdir -p "$(TARGETDIR)/test"
+	mkdir -p "$(TARGETDIR)/logs"
 	mkdir -p "$(TARGETDIR)/report"
 	mkdir -p "$(TARGETDIR)/doc"
 
@@ -192,7 +188,8 @@ install: uninstall
 	cp -f ./README.md "$(PATHINSTDOC)"
 	cp -f ./VERSION "$(PATHINSTDOC)"
 	cp -f ./RELEASE "$(PATHINSTDOC)"
-	chmod -R 644 "$(PATHINSTDOC)"*
+	find "$(PATHINSTDOC)" -type d -exec chmod 755 {} \;
+	find "$(PATHINSTDOC)" -type f -exec chmod 644 {} \;
 ifneq ($(strip $(CONFIGPATH)),)
 	mkdir -p "$(PATHINSTCFG)"
 	touch -c "$(PATHINSTCFG)"*
@@ -204,25 +201,40 @@ endif
 ## Format the source code
 .PHONY: format
 format:
-	./vendor/bin/mago --config ./mago.src.toml fmt src
-	./vendor/bin/mago --config ./mago.test.toml fmt test
+	$(COMPOSER) run-script cs-fix
+
+## Check that the source code is formatted
+.PHONY: formatcheck
+formatcheck:
+	$(COMPOSER) run-script fmt-check
 
 ## Analyze and Lint the source code
 .PHONY: lint
 lint:
-	./vendor/bin/mago --config ./mago.src.toml analyze src
-	./vendor/bin/mago --config ./mago.test.toml analyze test
-	./vendor/bin/mago --config ./mago.src.toml lint src
-	./vendor/bin/mago --config ./mago.test.toml lint test
+	$(COMPOSER) run-script cs-check
+	$(COMPOSER) run-script analyse
 
-## Run all tests and reports
+## Validate composer.json and check the dependencies for known advisories
+# Both are enforced by CI on every matrix job, so "qa" runs them too: otherwise a
+# packaging mistake or a new advisory is only reported after the PR is opened.
+.PHONY: check-deps
+check-deps:
+	$(COMPOSER) run-script check-deps
+
+## Check dependencies, formatting, lint, analyse and run all tests
 .PHONY: qa
-qa: ensuretarget lint test report
+qa: ensuretarget check-deps formatcheck lint test
+
+## Run all checks and produce the coverage report
+.PHONY: qa-coverage
+qa-coverage: ensuretarget check-deps formatcheck lint test-coverage
 
 ## Generate various reports
+# Not part of "qa": pdepend is a metrics tool, not a correctness gate, and its
+# 2.x line predates the newest PHP releases in the CI matrix.
 .PHONY: report
 report: ensuretarget
-	./vendor/bin/pdepend --jdepend-xml="$(TARGETDIR)/report/dependencies.xml" --summary-xml="$(TARGETDIR)/report/metrics.xml" --jdepend-chart="$(TARGETDIR)/report/dependecies.svg" --overview-pyramid="$(TARGETDIR)/report/overview-pyramid.svg" --ignore=vendor ./src
+	$(COMPOSER) run-script report
 
 ## Build the RPM package for RedHat-like Linux distributions
 .PHONY: rpm
@@ -241,6 +253,7 @@ rpm:
 	--define "_version $(VERSION)" \
 	--define "_release $(RELEASE)" \
 	--define "_current_directory $(CURRENTDIR)" \
+	--define "_builddate $(shell LC_ALL=C date '+%a %b %d %Y')" \
 	--define "_libpath /$(LIBPATH)" \
 	--define "_docpath /$(DOCPATH)" \
 	--define "_configpath /$(CONFIGPATH)" \
@@ -255,11 +268,21 @@ tag:
 	git pull
 
 ## Run unit tests
+# PHPUnit resolves its own configuration: phpunit.xml when present, else phpunit.xml.dist.
 .PHONY: test
 test: ensuretarget
-	cp phpunit.xml.dist phpunit.xml
-	#./vendor/bin/phpunit --migrate-configuration || true
-	OPENSSL_CONF=${OPENSSL_CONF} XDEBUG_MODE=coverage ./vendor/bin/phpunit --stderr test
+	$(COMPOSER) run-script test
+
+## Run unit tests and write the coverage report (requires Xdebug or pcov)
+.PHONY: test-coverage
+test-coverage: ensuretarget
+	$(COMPOSER) run-script test:coverage
+
+## Open every mode with qpdf and mutool (requires both on PATH)
+# Not part of "qa": it needs external readers that a developer may not have.
+.PHONY: interop
+interop:
+	$(COMPOSER) run-script interop
 
 ## Remove all installed files
 .PHONY: uninstall

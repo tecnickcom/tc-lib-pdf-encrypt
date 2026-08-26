@@ -20,43 +20,167 @@ on:
   workflow_dispatch:
 
 jobs:
-    test-php:
-        name: Test on php ${{ matrix.php-version }} and ${{ matrix.os }}
-        runs-on: ${{ matrix.os }}
-        continue-on-error: ${{ matrix.experimental }}
-        strategy:
-            fail-fast: false
-            matrix:
-                php-version: ["8.2", "8.3", "8.4", "8.5"]
-                experimental: [false]
-                os: [ubuntu-latest]
-                coverage-extension: [pcov]
-        steps:
-            - uses: actions/checkout@v7
-            - name: Use php ${{ matrix.php-version }}
-              uses: shivammathur/setup-php@v2
-              with:
-                  php-version: ${{ matrix.php-version }}
-                  coverage: ${{ matrix.coverage-extension }}
-                  extensions: bcmath, curl, date, gd, hash, imagick, intl, json, mbstring, openssl, pcre, zlib
-                  ini-values: display_errors=on, error_reporting=-1, zend.assertions=1
-            - name: List php modules
-              run: php -m
-            - name: List php modules using "no php ini" mode
-              run: php -m -n
-            - name: Cache module
-              uses: actions/cache@v6
-              with:
-                  path: ~/.composer/cache/
-                  key: composer-cache-${{ matrix.os }}
-            - name: Install dependencies
-              env:
-                GH_TOKEN: ${{ github.token }}
-              run: make deps
-            - name: Run all tests
-              run: make qa
-            - name: Send coverage
-              uses: codecov/codecov-action@v7
-              with:
-                flags: php-${{ matrix.php-version }}-${{ matrix.os }}
-                name: php-${{ matrix.php-version }}-${{ matrix.os }}
+  test-php:
+    name: Test on php ${{ matrix.php-version }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        php-version: ["8.2", "8.3", "8.4", "8.5"]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Use php ${{ matrix.php-version }}
+        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # 2.37.2
+        with:
+          php-version: ${{ matrix.php-version }}
+          coverage: pcov
+          extensions: ctype, hash, openssl, pcre
+          ini-values: display_errors=on, error_reporting=-1, zend.assertions=1
+      - name: List php modules
+        run: php -m
+      - name: List php modules using "no php ini" mode
+        run: php -m -n
+      - name: Cache module
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.composer/cache/
+          key: composer-${{ matrix.php-version }}-${{ hashFiles('composer.json') }}
+          restore-keys: composer-${{ matrix.php-version }}-
+      - name: Install dependencies
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: make deps
+      - name: Validate composer.json
+        run: composer validate --strict --no-check-lock
+      - name: Audit dependencies for known advisories
+        run: composer audit
+      - name: Run all tests
+        run: make qa-coverage
+      # make install, resources/autoload.php and the packaging descriptors are
+      # what reaches RPM/DEB users; nothing else in CI touches them. Install into
+      # a throwaway prefix and load the library through the shipped autoloader,
+      # which only resolves in the installed layout.
+      - name: Packaging smoke test
+        run: |
+          DESTDIR="$(mktemp -d)"
+          make install DESTDIR="$DESTDIR"
+          cat > "$DESTDIR/smoke.php" <<'SMOKE'
+          <?php
+          require \getenv('DESTDIR') . '/usr/share/php/Com/Tecnick/Pdf/Encrypt/autoload.php';
+          foreach ([
+              'Com\Tecnick\Pdf\Encrypt\Compute',
+              'Com\Tecnick\Pdf\Encrypt\Data',
+              'Com\Tecnick\Pdf\Encrypt\Decrypt',
+              'Com\Tecnick\Pdf\Encrypt\Encrypt',
+              'Com\Tecnick\Pdf\Encrypt\Exception',
+              'Com\Tecnick\Pdf\Encrypt\Output',
+          ] as $class) {
+              if (!\class_exists($class)) {
+                  \fwrite(\STDERR, 'the installed autoloader cannot load ' . $class . \PHP_EOL);
+                  exit(1);
+              }
+          }
+          echo 'installed layout loads every class', \PHP_EOL;
+          SMOKE
+          DESTDIR="$DESTDIR" php "$DESTDIR/smoke.php"
+
+      - name: Send coverage
+        uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v7.0.0
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          # Forks do not receive the token, so an upload failure there says
+          # nothing about the change under test.
+          fail_ci_if_error: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
+          flags: php-${{ matrix.php-version }}
+          name: php-${{ matrix.php-version }}
+
+  test-lowest:
+    name: Test lowest supported dependencies on php 8.2
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Use php 8.2
+        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # 2.37.2
+        with:
+          php-version: "8.2"
+          coverage: none
+          extensions: ctype, hash, openssl, pcre
+          ini-values: display_errors=on, error_reporting=-1, zend.assertions=1
+      - name: Cache module
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.composer/cache/
+          key: composer-lowest-${{ hashFiles('composer.json') }}
+          restore-keys: composer-lowest-
+      # composer.lock is not committed, so the default install always resolves
+      # to the top of every declared range. Pin the bottom of the ranges here.
+      - name: Install lowest supported dependencies
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: composer update --prefer-lowest --prefer-stable --no-interaction
+      - name: Run unit tests
+        run: composer run test
+
+  # make install and the packaging descriptors are what reaches RPM and DEB
+  # users. Nothing else in CI builds a package, so a broken spec or control file
+  # stays invisible until a release.
+  package:
+    name: Build the distribution packages
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Use php 8.4
+        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # 2.37.2
+        with:
+          php-version: "8.4"
+          coverage: none
+          extensions: ctype, hash, openssl, pcre
+      - name: Install packaging tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends -y rpm devscripts debhelper lintian fakeroot
+      - name: Build the bzip2 archive
+        run: make bz2
+      # rpmbuild reports a malformed spec on stderr and still exits 0, so the
+      # log is the only signal.
+      - name: Build the RPM package
+        run: |
+          set -o pipefail
+          make rpm 2>&1 | tee rpm.log
+          ! grep -q '^error:' rpm.log
+      - name: Build the DEB package
+        run: make deb
+
+  # The unit suite decrypts frozen qpdf fixtures, which covers the reading
+  # direction only. This job is the other half: it opens what the library writes
+  # with two independent readers, for every mode and both passwords.
+  interop:
+    name: Reader interoperability
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Use php 8.4
+        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # 2.37.2
+        with:
+          php-version: "8.4"
+          coverage: none
+          extensions: ctype, hash, openssl, pcre
+          ini-values: display_errors=on, error_reporting=-1, zend.assertions=1
+      - name: Install PDF readers
+        run: |
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends -y qpdf mupdf-tools
+      - name: Install dependencies
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: make deps
+      - name: Check every mode against qpdf and mutool
+        run: php resources/interop/check-readers.php

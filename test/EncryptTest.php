@@ -29,20 +29,10 @@ namespace Test;
  */
 class EncryptTest extends TestUtil
 {
-    // Coverage note: src/Compute.php hash2B() line ~295
-    //   `throw new EncException('AES-128-CBC encryption failed in hash2B')` is a defensive guard;
-    //   openssl_encrypt() never returns false for valid block-aligned AES-128-CBC inputs with
-    //   a correct 16-byte key and IV — this branch is unreachable under normal PHP/OpenSSL conditions.
-    //
-    // Coverage note: src/Compute.php getEncryptedRecipientBytes()
-    //   The `tempnam() === false` / `file_put_contents() === false` guards (and the
-    //   accompanying unlink() cleanup on those error paths) require a filesystem failure
-    //   that cannot be reliably induced in unit tests. The happy-path try/finally cleanup
-    //   and encryptRecipientEnvelope() are exercised by the public-key tests.
-    //
-    // Coverage note: src/Encrypt.php convertStringToHexString() line ~246
-    //   `return ''` after `preg_split('//', ...)` guards against the impossible case where
-    //   preg_split returns false; the regex '//\'' is always valid and never returns false.
+    /**
+     * Recipient certificate used by the public-key tests.
+     */
+    private const CERT = __DIR__ . '/data/cert.pem';
 
     public function testEncryptException(): void
     {
@@ -76,29 +66,34 @@ class EncryptTest extends TestUtil
     public function testEncryptPubThree(): void
     {
         $pubkeys = [[
-            'c' => __DIR__ . '/data/cert.pem',
+            'c' => self::CERT,
             'p' => ['print'],
         ]];
-        $encrypt = new \Com\Tecnick\Pdf\Encrypt\Encrypt(true, \md5('file_id'), 3, ['print'], 'alpha', 'beta', $pubkeys);
+        $encrypt = new \Com\Tecnick\Pdf\Encrypt\Encrypt(true, \md5('file_id'), 3, pubkeys: $pubkeys);
         $result = $encrypt->encrypt(3, 'alpha');
         $this->assertEquals(32, \strlen($result));
     }
 
+    /** A recipient without a 'p' entry is granted every permission. */
     public function testEncryptPubNoP(): void
     {
         $pubkeys = [[
-            'c' => __DIR__ . '/data/cert.pem',
-            'p' => ['print'],
+            'c' => self::CERT,
         ]];
-        $encrypt = new \Com\Tecnick\Pdf\Encrypt\Encrypt(true, \md5('file_id'), 3, ['print'], 'alpha', 'beta', $pubkeys);
-        $result = $encrypt->encrypt(3, 'alpha');
-        $this->assertEquals(32, \strlen($result));
+        $encrypt = new \Com\Tecnick\Pdf\Encrypt\Encrypt(true, \md5('file_id'), 3, pubkeys: $pubkeys);
+        $this->assertCount(1, $encrypt->getEncryptionData()['Recipients']);
+
+        $dec = new \Com\Tecnick\Pdf\Encrypt\Decrypt($encrypt->getEncryptionData());
+        $this->assertTrue($dec->authenticate('', self::CERT));
+        // -4 is the P value with every permission granted.
+        $this->assertSame(-4, $dec->getRecipientPermissions());
     }
 
+    /** A file that is not a certificate is refused by openssl_pkcs7_encrypt(). */
     public function testEncryptPubException(): void
     {
-        $this->bcExpectException(\Com\Tecnick\Pdf\Encrypt\Exception::class);
-        new \Com\Tecnick\Pdf\Encrypt\Encrypt(true, \md5('file_id'), 3, ['print'], 'alpha', 'beta', [[
+        $this->bcExpectException(\Com\Tecnick\Pdf\Encrypt\Exception::class, 'Unable to encrypt the file');
+        new \Com\Tecnick\Pdf\Encrypt\Encrypt(true, \md5('file_id'), 3, pubkeys: [[
             'c' => __FILE__,
             'p' => ['print'],
         ]]);
@@ -106,11 +101,11 @@ class EncryptTest extends TestUtil
 
     public function testEncryptPubUnreadableCertificateException(): void
     {
-        $this->bcExpectException(\Com\Tecnick\Pdf\Encrypt\Exception::class);
+        $this->bcExpectException(\Com\Tecnick\Pdf\Encrypt\Exception::class, 'Unable to read public key file');
 
         \set_error_handler(static fn(): bool => true);
         try {
-            new \Com\Tecnick\Pdf\Encrypt\Encrypt(true, \md5('file_id'), 3, ['print'], 'alpha', 'beta', [[
+            new \Com\Tecnick\Pdf\Encrypt\Encrypt(true, \md5('file_id'), 3, pubkeys: [[
                 'c' => __DIR__ . '/data/does-not-exist.pem',
                 'p' => ['print'],
             ]]);
@@ -119,12 +114,58 @@ class EncryptTest extends TestUtil
         }
     }
 
-    public function testEncryptRc4ThroughOpenSslWhenAvailable(): void
+    /** Public-key mode warns when a password is supplied. */
+    public function testPublicKeyModeWarnsAboutIgnoredPasswords(): void
     {
-        if (!\in_array('RC4', \openssl_get_cipher_methods(), true)) {
-            $this->markTestSkipped('OpenSSL RC4 cipher is not available on this runtime.');
+        $this->bcAssertUserWarningMessageMatches('/Public-key encryption ignores the user and owner passwords/', function (): void {
+            $encrypt = new \Com\Tecnick\Pdf\Encrypt\Encrypt(true, \md5('file_id'), 3, user_pass: 'alpha', pubkeys: [[
+                'c' => self::CERT,
+                'p' => ['print'],
+            ]]);
+            $this->assertSame('', $encrypt->getEncryptionData()['U']);
+        });
+    }
+
+    /** Public-key mode warns when the permissions argument is supplied. */
+    public function testPublicKeyModeWarnsAboutIgnoredPermissions(): void
+    {
+        $this->bcAssertUserWarningMessageMatches('/Public-key encryption ignores the permissions argument/', function (): void {
+            $encrypt = new \Com\Tecnick\Pdf\Encrypt\Encrypt(
+                true,
+                \md5('file_id'),
+                3,
+                ['print'],
+                pubkeys: [['c' => self::CERT, 'p' => ['print']]],
+            );
+            $this->assertSame(0, $encrypt->getEncryptionData()['P']);
+        });
+    }
+
+    /** The default arguments raise no public-key warning. */
+    public function testPublicKeyModeIsSilentWithoutIgnoredArguments(): void
+    {
+        $warnings = [];
+        \set_error_handler(static function (int $errno, string $errstr) use (&$warnings): bool {
+            if ($errno === E_USER_WARNING) {
+                $warnings[] = $errstr;
+            }
+
+            return $errno === E_USER_WARNING || $errno === E_USER_DEPRECATED;
+        });
+
+        try {
+            new \Com\Tecnick\Pdf\Encrypt\Encrypt(true, \md5('file_id'), 3, pubkeys: [
+                ['c' => self::CERT, 'p' => ['print']],
+            ]);
+        } finally {
+            \restore_error_handler();
         }
 
+        $this->assertSame([], $warnings);
+    }
+
+    public function testEncryptRc4(): void
+    {
         $encrypt = new \Com\Tecnick\Pdf\Encrypt\Encrypt(true, \md5('file_id'), 3, ['print'], 'alpha', 'beta');
         $result = $encrypt->encrypt('RC4', 'alpha', '0123456789abcdef');
         $this->assertSame(5, \strlen($result));
@@ -134,26 +175,16 @@ class EncryptTest extends TestUtil
     {
         $this->bcRunIgnoringUserDeprecations(function (): void {
             $pubkeys = [[
-                'c' => __DIR__ . '/data/cert.pem',
+                'c' => self::CERT,
                 'p' => ['print'],
             ]];
-            $encrypt = new \Com\Tecnick\Pdf\Encrypt\Encrypt(
-                true,
-                \md5('file_id'),
-                0,
-                ['print'],
-                'alpha',
-                'beta',
-                $pubkeys,
-            );
+            $encrypt = new \Com\Tecnick\Pdf\Encrypt\Encrypt(true, \md5('file_id'), 0, pubkeys: $pubkeys);
             $result = $encrypt->encrypt(1, 'alpha');
-            // Check for "error:0308010C:digital envelope routines::unsupported" when using OpenSSL 3.
-            // \var_dump(\openssl_error_string());
             $this->assertEquals(5, \strlen($result));
         });
     }
 
-    /** Issue 6: RC4 mode 0 must emit a deprecation notice. */
+    /** RC4 mode 0 emits a deprecation notice. */
     public function testRc4DeprecationModeZero(): void
     {
         $this->bcAssertUserDeprecationMessageMatches('/RC4 encryption.*deprecated.*cryptographically broken/i', function (): void {
@@ -163,7 +194,7 @@ class EncryptTest extends TestUtil
         });
     }
 
-    /** Issue 6: RC4 mode 1 must emit a deprecation notice. */
+    /** RC4 mode 1 emits a deprecation notice. */
     public function testRc4DeprecationModeOne(): void
     {
         $this->bcAssertUserDeprecationMessageMatches('/RC4 encryption.*deprecated.*cryptographically broken/i', function (): void {
@@ -173,46 +204,83 @@ class EncryptTest extends TestUtil
         });
     }
 
-    /** Issue 5: mode 0 + pubkeys must emit the upgrade deprecation notice. */
+    /**
+     * @return array<string, array{mixed, string}>
+     */
+    public static function malformedRecipientProvider(): array
+    {
+        return [
+            'not an array' => ['cert.pem', 'each recipient must be an array'],
+            'no certificate' => [[], "the 'c' entry must be a non-empty certificate path"],
+            'empty certificate' => [['c' => ''], "the 'c' entry must be a non-empty certificate path"],
+            'certificate not a string' => [['c' => 123], "the 'c' entry must be a non-empty certificate path"],
+            'permissions not an array' => [
+                ['c' => 'test/data/cert.pem', 'p' => 'print'],
+                "the 'p' entry must be an array of permission names",
+            ],
+            'permission not a string' => [
+                ['c' => 'test/data/cert.pem', 'p' => [7]],
+                "every 'p' entry must be a permission name",
+            ],
+        ];
+    }
+
+    /** A malformed recipient entry is rejected with a message naming the fault. */
+    #[\PHPUnit\Framework\Attributes\DataProvider('malformedRecipientProvider')]
+    public function testMalformedRecipientIsRejected(mixed $recipient, string $message): void
+    {
+        // The value is deliberately outside the declared parameter shape.
+        /** @var list<array{'c': string, 'p'?: array<string>}> $pubkeys */
+        $pubkeys = [$recipient];
+
+        $this->bcExpectException(\Com\Tecnick\Pdf\Encrypt\Exception::class, 'recipient 0: ' . $message);
+        new \Com\Tecnick\Pdf\Encrypt\Encrypt(true, '', 2, pubkeys: $pubkeys);
+    }
+
+    /** The message names the position of the offending entry. */
+    public function testMalformedRecipientNamesItsPosition(): void
+    {
+        $this->bcExpectException(
+            \Com\Tecnick\Pdf\Encrypt\Exception::class,
+            "recipient 1: the 'c' entry must be a non-empty certificate path",
+        );
+        new \Com\Tecnick\Pdf\Encrypt\Encrypt(true, '', 2, pubkeys: [
+            ['c' => 'test/data/cert.pem'],
+            ['c' => ''],
+        ]);
+    }
+
+    /** Mode 0 with pubkeys emits the upgrade deprecation notice. */
     public function testPubKeyModeZeroDeprecation(): void
     {
         $this->bcAssertUserDeprecationMessageMatches('/Public-key encryption requires at least RC4-128/i', function (): void {
             $pubkeys = [[
-                'c' => __DIR__ . '/data/cert.pem',
+                'c' => self::CERT,
                 'p' => ['print'],
             ]];
-            $encrypt = new \Com\Tecnick\Pdf\Encrypt\Encrypt(
-                true,
-                \md5('file_id'),
-                0,
-                ['print'],
-                'alpha',
-                'beta',
-                $pubkeys,
-            );
-            // After promotion to mode 1, the resulting encryption data must reflect mode 1
+            $encrypt = new \Com\Tecnick\Pdf\Encrypt\Encrypt(true, \md5('file_id'), 0, pubkeys: $pubkeys);
+            // The encryption data reports the promoted mode.
             $data = $encrypt->getEncryptionData();
             $this->assertEquals(1, $data['mode']);
             $this->assertEquals(2, $data['V']);
         });
     }
 
-    /** Issue 2: AES-256 perms bytes 12-15 must be random (not 'nick'). */
+    /** The AES-256 Perms bytes 12 to 15 are random. */
     public function testPermsRandomBytes(): void
     {
         $encrypt1 = new \Com\Tecnick\Pdf\Encrypt\Encrypt(true, \md5('file_id'), 3, ['print'], 'alpha', 'beta');
         $encrypt2 = new \Com\Tecnick\Pdf\Encrypt\Encrypt(true, \md5('file_id'), 3, ['print'], 'alpha', 'beta');
         $data1 = $encrypt1->getEncryptionData();
         $data2 = $encrypt2->getEncryptionData();
-        // The 16-byte AES-encrypted perms block (AESnopad strips the PKCS7 padding block)
+        // The perms block is 16 bytes of AES output, with no padding block.
         $this->assertEquals(16, \strlen($data1['perms']));
         $this->assertEquals(16, \strlen($data2['perms']));
-        // Two independently generated perms values should almost certainly differ (random bytes 12-15)
-        // Note: 1 in 2^32 chance of collision is acceptable to document rather than retry.
+        // Bytes 12 to 15 are random, so two blocks collide with probability 2^-32.
         $this->assertNotEquals($data1['perms'], $data2['perms'], 'perms bytes should be random each time');
     }
 
-    /** Issue 3: AES-256 with EncryptMetadata=false must store the flag. */
+    /** AES-256 with EncryptMetadata=false stores the flag. */
     public function testEncryptMetadataFalse(): void
     {
         $encrypt = new \Com\Tecnick\Pdf\Encrypt\Encrypt(
@@ -229,7 +297,99 @@ class EncryptTest extends TestUtil
         $this->assertFalse($data['EncryptMetadata']);
     }
 
-    /** Issue 4: AES-256 R6 (mode 4) encrypt round-trip. */
+    /**
+     * ISO 32000-1 Table 21 defines EncryptMetadata for V 4 and V 5 only, so for
+     * the RC4 modes the request is refused with a warning.
+     *
+     * @param int<0, 1> $mode
+     */
+    #[\PHPUnit\Framework\Attributes\DataProvider('rc4ModeProvider')]
+    public function testEncryptMetadataFalseIsRefusedForRc4Modes(int $mode): void
+    {
+        $this->bcAssertUserWarningMessageMatches('/Unencrypted metadata requires AES/', function () use ($mode): void {
+            $encrypt = new \Com\Tecnick\Pdf\Encrypt\Encrypt(
+                true,
+                \md5('file_id'),
+                $mode,
+                ['print'],
+                'alpha',
+                'beta',
+                null,
+                false,
+            );
+            $this->assertTrue($encrypt->getEncryptionData()['EncryptMetadata']);
+        });
+    }
+
+    /**
+     * @return array<string, array{int<0, 1>}>
+     */
+    public static function rc4ModeProvider(): array
+    {
+        return [
+            'mode 0' => [0],
+            'mode 1' => [1],
+        ];
+    }
+
+    /** The default value raises no warning for the RC4 modes. */
+    public function testEncryptMetadataTrueIsSilentForRc4Modes(): void
+    {
+        $warnings = [];
+        \set_error_handler(static function (int $errno, string $errstr) use (&$warnings): bool {
+            if ($errno === E_USER_WARNING) {
+                $warnings[] = $errstr;
+            }
+
+            return $errno === E_USER_WARNING || $errno === E_USER_DEPRECATED;
+        });
+
+        try {
+            new \Com\Tecnick\Pdf\Encrypt\Encrypt(true, \md5('file_id'), 0, ['print'], 'alpha', 'beta');
+        } finally {
+            \restore_error_handler();
+        }
+
+        $this->assertSame([], $warnings);
+    }
+
+    /**
+     * The EncryptMetadata entry is not written below V 4.
+     *
+     * @param int<0, 1> $mode
+     */
+    #[\PHPUnit\Framework\Attributes\DataProvider('rc4ModeProvider')]
+    public function testEncryptMetadataEntryIsOmittedBelowVersionFour(int $mode): void
+    {
+        $this->bcRunIgnoringUserNotices(function () use ($mode): void {
+            $encrypt = new \Com\Tecnick\Pdf\Encrypt\Encrypt(true, \md5('file_id'), $mode, ['print'], 'alpha', 'beta');
+            $pon = 0;
+            $this->assertStringNotContainsString('/EncryptMetadata', $encrypt->getPdfEncryptionObj($pon));
+        });
+    }
+
+    /**
+     * @return array<string, array{int<2, 4>}>
+     */
+    public static function aesModeProvider(): array
+    {
+        return [
+            'mode 2' => [2],
+            'mode 3' => [3],
+            'mode 4' => [4],
+        ];
+    }
+
+    /** From V 4 up the EncryptMetadata entry is always written. */
+    #[\PHPUnit\Framework\Attributes\DataProvider('aesModeProvider')]
+    public function testEncryptMetadataEntryIsWrittenFromVersionFour(int $mode): void
+    {
+        $encrypt = new \Com\Tecnick\Pdf\Encrypt\Encrypt(true, \md5('file_id'), $mode, ['print'], 'alpha', 'beta');
+        $pon = 0;
+        $this->assertStringContainsString('/EncryptMetadata true', $encrypt->getPdfEncryptionObj($pon));
+    }
+
+    /** AES-256 R6 (mode 4) encrypt round-trip. */
     public function testEncryptFour(): void
     {
         $encrypt = new \Com\Tecnick\Pdf\Encrypt\Encrypt(true, \md5('file_id'), 4, ['print'], 'alpha', 'beta');
@@ -237,7 +397,7 @@ class EncryptTest extends TestUtil
         $this->assertEquals(32, \strlen($result));
     }
 
-    /** Issue 4: AES-256 R6 (mode 4) encryptdata must have V=5, R=6 and mode=4. */
+    /** AES-256 R6 (mode 4) reports V 5, R 6 and mode 4. */
     public function testEncryptFourSettings(): void
     {
         $encrypt = new \Com\Tecnick\Pdf\Encrypt\Encrypt(true, \md5('file_id'), 4, ['print'], 'alpha', 'beta');
@@ -254,7 +414,7 @@ class EncryptTest extends TestUtil
         $this->assertEquals(16, \strlen($data['perms']));
     }
 
-    /** An empty file ID is replaced by a random one: revisions 2 to 4 derive the key from it. */
+    /** An empty file ID is replaced by a random 16-byte one. */
     public function testEmptyFileIdIsGenerated(): void
     {
         $encrypt = new \Com\Tecnick\Pdf\Encrypt\Encrypt(true, '', 2, ['print']);
@@ -263,14 +423,14 @@ class EncryptTest extends TestUtil
         $this->assertEquals(4, $data['R']);
     }
 
-    /** Issue 4: AES-256 R6 (mode 4) public-key encryption. */
+    /** AES-256 R6 (mode 4) public-key encryption. */
     public function testEncryptPubFour(): void
     {
         $pubkeys = [[
-            'c' => __DIR__ . '/data/cert.pem',
+            'c' => self::CERT,
             'p' => ['print'],
         ]];
-        $encrypt = new \Com\Tecnick\Pdf\Encrypt\Encrypt(true, \md5('file_id'), 4, ['print'], 'alpha', 'beta', $pubkeys);
+        $encrypt = new \Com\Tecnick\Pdf\Encrypt\Encrypt(true, \md5('file_id'), 4, pubkeys: $pubkeys);
         $result = $encrypt->encrypt(4, 'alpha');
         $this->assertEquals(32, \strlen($result));
     }
@@ -281,7 +441,7 @@ class EncryptTest extends TestUtil
             $permissions = ['print'];
             $encrypt = new \Com\Tecnick\Pdf\Encrypt\Encrypt(true, \md5('file_id'), 0, $permissions, 'alpha', 'beta');
             $result = $encrypt->getEncryptionData();
-            $this->assertEquals(2_147_422_008, $result['protection']);
+            $this->assertSame(-8, $result['protection']);
             $this->assertEquals(1, $result['V']);
             $this->assertEquals(40, $result['Length']);
             $this->assertEquals('V2', $result['CF']['CFM']);
@@ -294,7 +454,7 @@ class EncryptTest extends TestUtil
 
         $encrypt = new \Com\Tecnick\Pdf\Encrypt\Encrypt(true, \md5('file_id'), 2, $permissions, 'alpha', 'beta');
         $result = $encrypt->getObjectKey(123);
-        $this->assertEquals('93879594941619c98047c404192b977d', \bin2hex($result));
+        $this->assertSame('a47d6307868ba078a7bf96531d64fa64', \bin2hex($result));
     }
 
     public function testGetUserPermissionCode(): void
@@ -313,14 +473,98 @@ class EncryptTest extends TestUtil
 
         $encrypt = new \Com\Tecnick\Pdf\Encrypt\Encrypt();
         $result = $encrypt->getUserPermissionCode($permissions, 0);
-        $this->assertEquals(2_147_421_954, $result);
+        $this->assertSame(-62, $result);
     }
 
-    public function testGetUserPermissionCodeIgnoreInvalidPermission(): void
+    /** An unrecognised permission name is rejected. */
+    public function testGetUserPermissionCodeRejectsInvalidPermission(): void
+    {
+        $this->bcExpectException(\Com\Tecnick\Pdf\Encrypt\Exception::class);
+        $encrypt = new \Com\Tecnick\Pdf\Encrypt\Encrypt();
+        $encrypt->getUserPermissionCode(['invalid-permission'], 0);
+    }
+
+    /** No blocked permission yields the P value with everything granted. */
+    public function testGetUserPermissionCodeDefault(): void
     {
         $encrypt = new \Com\Tecnick\Pdf\Encrypt\Encrypt();
-        $result = $encrypt->getUserPermissionCode(['invalid-permission'], 0);
-        $this->assertEquals(2_147_422_012, $result);
+        $this->assertSame(-4, $encrypt->getUserPermissionCode([], 4));
+    }
+
+    /** Repeating a permission yields the same P value. */
+    public function testGetUserPermissionCodeIsIdempotent(): void
+    {
+        $encrypt = new \Com\Tecnick\Pdf\Encrypt\Encrypt();
+        $once = $encrypt->getUserPermissionCode(['print'], 4);
+        $twice = $encrypt->getUserPermissionCode(['print', 'print'], 4);
+        $this->assertSame($once, $twice);
+        // bit 3 (print) cleared, bit 4 (modify) still granted
+        $this->assertSame(0, $once & 4);
+        $this->assertSame(8, $once & 8);
+    }
+
+    /** Each permission name clears its own bit and no other. */
+    public function testGetUserPermissionCodeEachBit(): void
+    {
+        $encrypt = new \Com\Tecnick\Pdf\Encrypt\Encrypt();
+        $bits = [
+            'print' => 4,
+            'modify' => 8,
+            'copy' => 16,
+            'annot-forms' => 32,
+            'fill-forms' => 256,
+            'extract' => 512,
+            'assemble' => 1024,
+            'print-high' => 2048,
+        ];
+        foreach ($bits as $name => $bit) {
+            $result = $encrypt->getUserPermissionCode([$name], 4);
+            $this->assertSame(0, $result & $bit, $name . ' must be cleared');
+            $this->assertSame(-4 & ~$bit, $result, $name . ' must clear only its own bit');
+        }
+    }
+
+    /** Bit 2 uses inverted logic: naming 'owner' sets it. */
+    public function testGetUserPermissionCodeOwnerBit(): void
+    {
+        $encrypt = new \Com\Tecnick\Pdf\Encrypt\Encrypt();
+        $this->assertSame(0, $encrypt->getUserPermissionCode([], 4) & 2);
+        $this->assertSame(2, $encrypt->getUserPermissionCode(['owner'], 4) & 2);
+    }
+
+    /** Revision 2 defines bits 3 to 6 only; the others stay granted. */
+    public function testGetUserPermissionCodeRevisionTwoIgnoresHighBits(): void
+    {
+        $encrypt = new \Com\Tecnick\Pdf\Encrypt\Encrypt();
+        $result = $encrypt->getUserPermissionCode(['print-high'], 0);
+        $this->assertSame(-4, $result);
+    }
+
+    /** A non-hexadecimal file ID is rejected. */
+    public function testInvalidFileIdThrows(): void
+    {
+        $this->bcExpectException(\Com\Tecnick\Pdf\Encrypt\Exception::class);
+        new \Com\Tecnick\Pdf\Encrypt\Encrypt(true, 'ZZZZ-not-hex', 2, ['print'], 'alpha', 'beta');
+    }
+
+    /** Dumping the object reveals neither the file key nor the passwords. */
+    public function testDebugInfoRedactsSecrets(): void
+    {
+        $encrypt = new \Com\Tecnick\Pdf\Encrypt\Encrypt(true, \md5('file_id'), 4, ['print'], 'alpha', 'beta');
+        $dump = \print_r($encrypt->__debugInfo(), true);
+        $this->assertStringNotContainsString('alpha', $dump);
+        $this->assertStringNotContainsString('beta', $dump);
+        $this->assertStringNotContainsString(\bin2hex($encrypt->getEncryptionData()['key']), \bin2hex($dump));
+        $this->assertStringContainsString('[redacted]', $dump);
+    }
+
+    /** An encryption dictionary is produced only when encryption is enabled. */
+    public function testGetPdfEncryptionObjDisabledThrows(): void
+    {
+        $this->bcExpectException(\Com\Tecnick\Pdf\Encrypt\Exception::class);
+        $encrypt = new \Com\Tecnick\Pdf\Encrypt\Encrypt();
+        $pon = 0;
+        $encrypt->getPdfEncryptionObj($pon);
     }
 
     public function testConvertHexStringToString(): void
@@ -332,9 +576,48 @@ class EncryptTest extends TestUtil
 
         $result = $encrypt->convertHexStringToString('68656c6c6f20776f726c64');
         $this->assertEquals('hello world', $result);
+    }
 
-        $result = $encrypt->convertHexStringToString('68656c6c6f20776f726c642');
-        $this->assertEquals('hello world ', $result);
+    /** An odd-length hexadecimal input is rejected. */
+    public function testConvertHexStringToStringRejectsOddLength(): void
+    {
+        $encrypt = new \Com\Tecnick\Pdf\Encrypt\Encrypt();
+        $this->bcExpectException(\Com\Tecnick\Pdf\Encrypt\Exception::class);
+        $encrypt->convertHexStringToString('68656c6c6f20776f726c642');
+    }
+
+    public function testOddLengthFileIdThrows(): void
+    {
+        $this->bcExpectException(\Com\Tecnick\Pdf\Encrypt\Exception::class);
+        new \Com\Tecnick\Pdf\Encrypt\Encrypt(true, 'abc', 2, ['print'], 'alpha', 'beta');
+    }
+
+    public function testGetFileIdReturnsTheHexadecimalForm(): void
+    {
+        $fileId = \md5('file_id');
+        $encrypt = new \Com\Tecnick\Pdf\Encrypt\Encrypt(true, $fileId, 2, ['print'], 'alpha', 'beta');
+        $this->assertSame($fileId, $encrypt->getFileId());
+        $this->assertSame($encrypt->getEncryptionData()['fileid'], (string) \hex2bin($encrypt->getFileId()));
+    }
+
+    public function testGetFileIdOfAGeneratedFileId(): void
+    {
+        $encrypt = new \Com\Tecnick\Pdf\Encrypt\Encrypt(true, '', 2, ['print'], 'alpha', 'beta');
+        $this->assertSame(32, \strlen($encrypt->getFileId()));
+        $this->assertTrue(\ctype_xdigit($encrypt->getFileId()));
+    }
+
+    /** A generated file ID differs on every document, and so does the key. */
+    public function testGeneratedFileIdIsRandom(): void
+    {
+        $first = new \Com\Tecnick\Pdf\Encrypt\Encrypt(true, '', 2, ['print'], 'alpha', 'beta');
+        $second = new \Com\Tecnick\Pdf\Encrypt\Encrypt(true, '', 2, ['print'], 'alpha', 'beta');
+
+        $this->assertNotSame($first->getFileId(), $second->getFileId());
+        $this->assertNotSame(
+            \bin2hex($first->getEncryptionData()['key']),
+            \bin2hex($second->getEncryptionData()['key']),
+        );
     }
 
     public function testConvertStringToHexString(): void
@@ -356,10 +639,22 @@ class EncryptTest extends TestUtil
         $this->assertEquals('', $result);
 
         $result = $encrypt->encodeNameObject('059akzAKZ#_=-');
-        $this->assertEquals('059akzAKZ#_=-', $result);
+        $this->assertEquals('059akzAKZ#23_=-', $result);
 
         $result = $encrypt->encodeNameObject('059[]{}+~*akzAKZ#_=-');
-        $this->assertEquals('059#5B#5D#7B#7D#2B#7E#2AakzAKZ#_=-', $result);
+        $this->assertEquals('059#5B#5D#7B#7D#2B#7E#2AakzAKZ#23_=-', $result);
+    }
+
+    /** The NUMBER SIGN, which introduces the escape, is itself escaped as #23. */
+    public function testEncodeNameObjectEscapesTheNumberSign(): void
+    {
+        $encrypt = new \Com\Tecnick\Pdf\Encrypt\Encrypt();
+
+        $this->assertSame('#23', $encrypt->encodeNameObject('#'));
+        $this->assertSame('a#23b', $encrypt->encodeNameObject('a#b'));
+        // The three characters '#23' do not collapse into the one they escape.
+        $this->assertSame('#2323', $encrypt->encodeNameObject('#23'));
+        $this->assertNotSame($encrypt->encodeNameObject('#'), $encrypt->encodeNameObject('#23'));
     }
 
     public function testEscapeString(): void
@@ -390,6 +685,7 @@ class EncryptTest extends TestUtil
         $this->assertEquals('(hello world) slash \\' . \chr(13) . \chr(250), $result);
     }
 
+    /** Known-answer test: explicit passwords make the ciphertext reproducible. */
     public function testEncryptStringEnabled(): void
     {
         $this->bcRunIgnoringUserDeprecations(function (): void {
@@ -404,13 +700,13 @@ class EncryptTest extends TestUtil
                 'print-high',
             ];
 
-            $enc = new \Com\Tecnick\Pdf\Encrypt\Encrypt(true, \md5('file_id'), 0, $permissions, 'alpha');
+            $enc = new \Com\Tecnick\Pdf\Encrypt\Encrypt(true, \md5('file_id'), 0, $permissions, 'alpha', 'beta');
             $result = $enc->encryptString('(hello world) slash \\' . \chr(13));
-            $this->assertEquals('728cc693be1e4c1fb6b7e7b2a34644ad', \md5($result));
+            $this->assertSame('eb60b1a6704029819c96d47186e45206', \md5($result));
 
             $enc = new \Com\Tecnick\Pdf\Encrypt\Encrypt(true, \md5('file_id'), 1, $permissions, 'alpha', 'beta');
             $result = $enc->encryptString('(hello world) slash \\' . \chr(13));
-            $this->assertEquals('258ad774ddeec21b3b439a720df18e0d', \md5($result));
+            $this->assertSame('5dfd302354afb05df465752ef95f7f96', \md5($result));
         });
     }
 
@@ -442,13 +738,13 @@ class EncryptTest extends TestUtil
                 'print-high',
             ];
 
-            $enc = new \Com\Tecnick\Pdf\Encrypt\Encrypt(true, \md5('file_id'), 0, $permissions, 'alpha');
+            $enc = new \Com\Tecnick\Pdf\Encrypt\Encrypt(true, \md5('file_id'), 0, $permissions, 'alpha', 'beta');
             $result = $enc->escapeDataString('(hello world) slash \\' . \chr(13));
-            $this->assertEquals('24f60765c1c07a44fc3c9b44d2f55dbc', \md5($result));
+            $this->assertSame('4ca79a95f6693bc06ebcc6488d6dc509', \md5($result));
 
             $enc = new \Com\Tecnick\Pdf\Encrypt\Encrypt(true, \md5('file_id'), 1, $permissions, 'alpha', 'beta');
             $result = $enc->escapeDataString('(hello world) slash \\' . \chr(13));
-            $this->assertEquals('ebc28272f4aff661fa0b7764d791fb79', \md5($result));
+            $this->assertSame('f74aaf7b09d6946fc5a99ec9f0ec07e1', \md5($result));
         });
     }
 
@@ -461,10 +757,73 @@ class EncryptTest extends TestUtil
         $this->assertEquals('(D:', \substr($result, 0, 3));
         $this->assertEquals("+00'00')", \substr($result, -8));
 
+        // With encryption enabled the date is encrypted, so only the
+        // literal-string delimiters are predictable without the key.
         $this->bcRunIgnoringUserDeprecations(function () use ($permissions): void {
-            $enc = new \Com\Tecnick\Pdf\Encrypt\Encrypt(true, \md5('file_id'), 0, $permissions, 'alpha');
-            $result = $enc->getFormattedDate();
-            $this->assertNotEmpty($result);
+            $enc = new \Com\Tecnick\Pdf\Encrypt\Encrypt(true, \md5('file_id'), 0, $permissions, 'alpha', 'beta');
+            $result = $enc->getFormattedDate(0, 3);
+            $this->assertSame('(', \substr($result, 0, 1));
+            $this->assertSame(')', \substr($result, -1));
+
+            $dec = new \Com\Tecnick\Pdf\Encrypt\Decrypt($enc->getEncryptionData());
+            $this->assertTrue($dec->authenticate('alpha'));
+            $this->assertSame("D:19700101000000+00'00'", $dec->decryptString(\substr($result, 1, -1), 3));
         });
+    }
+
+    /**
+     * @return array<string, array{string}>
+     */
+    public static function timezoneProvider(): array
+    {
+        return [
+            'UTC' => ['UTC'],
+            'ahead of UTC' => ['Europe/Rome'],
+            'behind UTC' => ['America/New_York'],
+            'fractional offset' => ['Asia/Kolkata'],
+        ];
+    }
+
+    /** The instant is rendered in UTC, whatever the ambient timezone. */
+    #[\PHPUnit\Framework\Attributes\DataProvider('timezoneProvider')]
+    public function testGetFormattedDateIsTimezoneIndependent(string $timezone): void
+    {
+        $previous = \date_default_timezone_get();
+        \date_default_timezone_set($timezone);
+
+        try {
+            $enc = new \Com\Tecnick\Pdf\Encrypt\Encrypt(false);
+            $this->assertSame("(D:19700101000000+00'00')", $enc->getFormattedDate(0));
+        } finally {
+            \date_default_timezone_set($previous);
+        }
+    }
+
+    /** The default owner password is drawn fresh for every document. */
+    public function testDefaultOwnerPasswordIsRandom(): void
+    {
+        $first = new \Com\Tecnick\Pdf\Encrypt\Encrypt(true, \md5('file_id'), 2, ['print'], 'alpha');
+        $second = new \Com\Tecnick\Pdf\Encrypt\Encrypt(true, \md5('file_id'), 2, ['print'], 'alpha');
+
+        $firstOwner = $first->getEncryptionData()['owner_password'];
+        $secondOwner = $second->getEncryptionData()['owner_password'];
+
+        // The stored value is the padded 32-byte form of a 32 hex character string.
+        $this->assertSame(32, \strlen($firstOwner));
+        $this->assertTrue(\ctype_xdigit($firstOwner));
+        $this->assertNotSame(\bin2hex($firstOwner), \bin2hex($secondOwner));
+        // The document key derived from it differs too.
+        $this->assertNotSame(
+            \bin2hex($first->getEncryptionData()['key']),
+            \bin2hex($second->getEncryptionData()['key']),
+        );
+    }
+
+    /** An explicit owner password yields the same key on every run. */
+    public function testExplicitOwnerPasswordIsDeterministic(): void
+    {
+        $first = new \Com\Tecnick\Pdf\Encrypt\Encrypt(true, \md5('file_id'), 2, ['print'], 'alpha', 'beta');
+        $second = new \Com\Tecnick\Pdf\Encrypt\Encrypt(true, \md5('file_id'), 2, ['print'], 'alpha', 'beta');
+        $this->assertSame(\bin2hex($first->getEncryptionData()['key']), \bin2hex($second->getEncryptionData()['key']));
     }
 }
