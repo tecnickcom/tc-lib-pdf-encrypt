@@ -121,7 +121,6 @@ class OutputTest extends TestUtil
             . ">>\n"
             . "/StmF /StdCF\n"
             . "/StrF /StdCF\n"
-            . "/EFF /StdCF\n"
             . "/R 4\n"
             . "/O <8a270f21b879d1b085b290b9b7776208899d8f595c3b4af708a04f8d953e4fbd>\n"
             . "/U <9cf46567f9b0fbce65deca971ea9950800000000000000000000000000000000>\n"
@@ -178,7 +177,6 @@ class OutputTest extends TestUtil
             . ">>\n"
             . "/StmF /StdCF\n"
             . "/StrF /StdCF\n"
-            . "/EFF /StdCF\n"
             . "/R 5\n"
             . "/OE <24f81ea8781ae0e126667db5c4351419d251597e3f9fee39f7f7ad21345325e6>\n"
             . "/UE <f5bfc7e128b0aea23b4ad0e2574194e11fbbc94947f0fea507e09f1d9acbe46c>\n"
@@ -215,7 +213,6 @@ class OutputTest extends TestUtil
             . ">>\n"
             . "/StmF /StdCF\n"
             . "/StrF /StdCF\n"
-            . "/EFF /StdCF\n"
             . "/R 6\n"
             . "/OE <3ee1df3ccf3b3beca5339bd9ba51042ab35c3624716ba4c0a2b492e361fcb3e3>\n"
             . "/UE <dce9d292203c654986b17e371129e548aba22d46114d2e7572b29ee152f67f93>\n"
@@ -286,7 +283,7 @@ class OutputTest extends TestUtil
         $this->assertMatchesRegularExpression('~\n/Perms <[0-9a-f]{32}>\n~', $result);
     }
 
-    /** /EFF points at the stream filter when embedded file encryption is enabled. */
+    /** /EFF is omitted when embedded file encryption is enabled, so readers fall back to /StmF. */
     public function testGetPdfEncryptionObjEff(): void
     {
         $encrypt = new \Com\Tecnick\Pdf\Encrypt\Encrypt(
@@ -302,7 +299,8 @@ class OutputTest extends TestUtil
         );
         $pon = 0;
         $result = $encrypt->getPdfEncryptionObj($pon);
-        $this->assertStringContainsString('/EFF /StdCF', $result);
+        $this->assertStringContainsString("/StmF /StdCF\n", $result);
+        $this->assertStringNotContainsString('/EFF', $result);
     }
 
     /**
