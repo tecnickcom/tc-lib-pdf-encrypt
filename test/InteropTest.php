@@ -360,7 +360,7 @@ class InteropTest extends TestUtil
             $jdx = ($jdx + $val) % 256;
             $sbox[$idx] = $sbox[$jdx] ?? 0;
             $sbox[$jdx] = $val;
-            $keybyte = $sbox[(($sbox[$idx] ?? 0) + ($sbox[$jdx] ?? 0)) % 256] ?? 0;
+            $keybyte = $sbox[($sbox[$idx] + $sbox[$jdx]) % 256] ?? 0;
             $out .= \chr(\ord($data[$pos]) ^ $keybyte);
         }
 
