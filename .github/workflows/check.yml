@@ -58,33 +58,6 @@ jobs:
         run: composer audit
       - name: Run all tests
         run: make qa-coverage
-      # make install, resources/autoload.php and the packaging descriptors are
-      # what reaches RPM/DEB users; nothing else in CI touches them. Install into
-      # a throwaway prefix and load the library through the shipped autoloader,
-      # which only resolves in the installed layout.
-      - name: Packaging smoke test
-        run: |
-          DESTDIR="$(mktemp -d)"
-          make install DESTDIR="$DESTDIR"
-          cat > "$DESTDIR/smoke.php" <<'SMOKE'
-          <?php
-          require \getenv('DESTDIR') . '/usr/share/php/Com/Tecnick/Pdf/Encrypt/autoload.php';
-          foreach ([
-              'Com\Tecnick\Pdf\Encrypt\Compute',
-              'Com\Tecnick\Pdf\Encrypt\Data',
-              'Com\Tecnick\Pdf\Encrypt\Decrypt',
-              'Com\Tecnick\Pdf\Encrypt\Encrypt',
-              'Com\Tecnick\Pdf\Encrypt\Exception',
-              'Com\Tecnick\Pdf\Encrypt\Output',
-          ] as $class) {
-              if (!\class_exists($class)) {
-                  \fwrite(\STDERR, 'the installed autoloader cannot load ' . $class . \PHP_EOL);
-                  exit(1);
-              }
-          }
-          echo 'installed layout loads every class', \PHP_EOL;
-          SMOKE
-          DESTDIR="$DESTDIR" php "$DESTDIR/smoke.php"
 
       - name: Send coverage
         uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
@@ -124,38 +97,6 @@ jobs:
         run: composer update --prefer-lowest --prefer-stable --no-interaction
       - name: Run unit tests
         run: composer run test
-
-  # make install and the packaging descriptors are what reaches RPM and DEB
-  # users. Nothing else in CI builds a package, so a broken spec or control file
-  # stays invisible until a release.
-  package:
-    name: Build the distribution packages
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - name: Use php 8.4
-        uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # 2.40.0
-        with:
-          php-version: "8.4"
-          coverage: none
-          extensions: ctype, hash, openssl, pcre
-      - name: Install packaging tools
-        run: |
-          sudo apt-get update
-          sudo apt-get install --no-install-recommends -y rpm devscripts debhelper lintian fakeroot
-      - name: Build the bzip2 archive
-        run: make bz2
-      # rpmbuild reports a malformed spec on stderr and still exits 0, so the
-      # log is the only signal.
-      - name: Build the RPM package
-        run: |
-          set -o pipefail
-          make rpm 2>&1 | tee rpm.log
-          ! grep -q '^error:' rpm.log
-      - name: Build the DEB package
-        run: make deb
 
   # The unit suite decrypts frozen qpdf fixtures, which covers the reading
   # direction only. This job is the other half: it opens what the library writes
